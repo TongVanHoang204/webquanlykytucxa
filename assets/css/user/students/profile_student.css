@@ -1,0 +1,196 @@
+/* ================================
+    GLOBAL
+================================ */
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #eef4ff 0%, #dbe9ff 100%);
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+.container.student-form-page {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 25px;
+}
+
+
+/* ================================
+    HEADER
+================================ */
+
+.page-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.page-header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #0d47a1;
+    margin-bottom: 10px;
+}
+
+.page-header p {
+    font-size: 16px;
+    color: #555;
+}
+
+
+/* ================================
+    ALERT
+================================ */
+
+.alert {
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.alert-danger {
+    background: #ffe5e7;
+    border-left: 5px solid #ff3b47;
+    color: #b80012;
+}
+
+.alert-success {
+    background: #e3ffe9;
+    border-left: 5px solid #3CCF4E;
+    color: #0f7a1a;
+}
+
+.alert h4 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+}
+
+
+/* ================================
+    FORM WRAPPER
+================================ */
+
+.student-form {
+    background: #fff;
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+
+/* ================================
+    INPUT - LABEL
+================================ */
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cdd2e1;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: 0.2s;
+    background: #f8faff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #4a90ff;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(74, 144, 255, 0.25);
+    outline: none;
+}
+
+.text-danger {
+    color: #d60000;
+}
+
+
+/* ================================
+    AVATAR PREVIEW
+================================ */
+
+.avatar-preview {
+    margin-bottom: 10px;
+}
+
+.avatar-preview img {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #6793fb;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+
+/* ================================
+    BUTTONS
+================================ */
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1e6eff 0%, #4a90ff 100%);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background: #d6d8db;
+}
+
+
+/* ================================
+    RESPONSIVE
+================================ */
+
+@media (max-width: 830px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}

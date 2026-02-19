@@ -1,0 +1,631 @@
+/* student-bills.css */
+
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --secondary: #7209b7;
+    --success: #2ecc71;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --info: #3498db;
+    --light: #f8f9fa;
+    --dark: #2c3e50;
+    --gray: #6c757d;
+    --gray-light: #e9ecef;
+    --border-radius: 12px;
+    --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    --box-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
+    --transition: all 0.3s ease;
+}
+
+/* Explicit Dark Mode Overrides */
+[data-theme="dark"] {
+    --light: #1e293b;
+    --dark: #f8fafc;
+    --gray: #94a3b8;
+    --gray-light: #334155;
+    --box-shadow: none;
+}
+
+[data-theme="dark"] .quick-stat-card,
+[data-theme="dark"] .filter-section-student,
+[data-theme="dark"] .table-container-student,
+[data-theme="dark"] .modal-content {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: none;
+    border: 1px solid var(--stroke);
+}
+
+[data-theme="dark"] .quick-stat-card .number,
+[data-theme="dark"] .filter-group-student label,
+[data-theme="dark"] .empty-state-student h3 {
+    color: var(--text);
+}
+
+[data-theme="dark"] .quick-stat-card .label,
+[data-theme="dark"] .empty-state-student,
+[data-theme="dark"] .modal-close {
+    color: var(--muted);
+}
+
+[data-theme="dark"] .filter-select-student {
+    background: var(--bg);
+    color: var(--text);
+    border-color: var(--stroke);
+}
+
+[data-theme="dark"] .bills-table-student tbody tr:hover {
+    background: var(--bg);
+}
+
+[data-theme="dark"] .bills-table-student td {
+    color: var(--text);
+    border-bottom-color: var(--stroke);
+}
+
+
+
+/* Main Container */
+
+.student-bills-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+
+/* Header Section */
+
+.bills-student-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 2.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.bills-student-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" preserveAspectRatio="none"><path d="M0,50 Q250,30 500,50 T1000,50 L1000,100 L0,100 Z" fill="rgba(255,255,255,0.1)"/></svg>') bottom center no-repeat;
+    background-size: cover;
+}
+
+.bills-student-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.bills-student-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+    position: relative;
+}
+
+
+/* Quick Stats */
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.quick-stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    text-align: center;
+    transition: var(--transition);
+    border-top: 4px solid;
+}
+
+.quick-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.quick-stat-card.total {
+    border-top-color: var(--primary);
+}
+
+.quick-stat-card.paid {
+    border-top-color: var(--success);
+}
+
+.quick-stat-card.pending {
+    border-top-color: var(--warning);
+}
+
+.quick-stat-card.debt {
+    border-top-color: var(--danger);
+}
+
+.quick-stat-card i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.quick-stat-card.total i {
+    color: var(--primary);
+}
+
+.quick-stat-card.paid i {
+    color: var(--success);
+}
+
+.quick-stat-card.pending i {
+    color: var(--warning);
+}
+
+.quick-stat-card.debt i {
+    color: var(--danger);
+}
+
+.quick-stat-card .number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: block;
+}
+
+.quick-stat-card .label {
+    font-size: 0.9rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* Filter Section */
+
+.filter-section-student {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 2rem;
+}
+
+.filter-grid-student {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group-student {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group-student label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-select-student {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--gray-light);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.filter-select-student:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.filter-actions-student {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+
+/* Buttons */
+
+.btn-student {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    justify-content: center;
+}
+
+.btn-primary-student {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary-student:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.btn-secondary-student {
+    background: var(--gray-light);
+    color: var(--dark);
+}
+
+.btn-secondary-student:hover {
+    background: #d1d5db;
+    transform: translateY(-2px);
+}
+
+.btn-success-student {
+    background: var(--success);
+    color: white;
+}
+
+.btn-success-student:hover {
+    background: #27ae60;
+    transform: translateY(-2px);
+}
+
+.btn-info-student {
+    background: var(--info);
+    color: white;
+}
+
+.btn-info-student:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+}
+
+.btn-sm-student {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+
+/* Table Styles */
+
+.table-container-student {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.bills-table-student {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.bills-table-student thead {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+.bills-table-student th {
+    padding: 1.25rem 1rem;
+    text-align: left;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bills-table-student tbody tr {
+    transition: var(--transition);
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.bills-table-student tbody tr:hover {
+    background: var(--light);
+}
+
+.bills-table-student td {
+    padding: 1.25rem 1rem;
+    color: var(--dark);
+    vertical-align: middle;
+}
+
+
+/* Status Badges */
+
+.status-badge-student {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-paid-student {
+    background: #d5f4e6;
+    color: #27ae60;
+    border: 1px solid #2ecc71;
+}
+
+.status-unpaid-student {
+    background: #fde8e8;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+}
+
+
+/* Amount Styling */
+
+.amount-student {
+    font-weight: 700;
+}
+
+.amount-paid-student {
+    color: var(--success);
+}
+
+.amount-unpaid-student {
+    color: var(--danger);
+}
+
+
+/* Action Buttons */
+
+.action-buttons-student {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+
+/* Empty State */
+
+.empty-state-student {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray);
+}
+
+.empty-state-student i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: var(--gray-light);
+}
+
+.empty-state-student h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--dark);
+}
+
+
+/* Payment Modal */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-hover);
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray);
+}
+
+
+/* Responsive Design */
+
+@media (max-width: 1024px) {
+    .bills-table-student {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .filter-grid-student {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .student-bills-container {
+        padding: 0 1rem;
+        margin: 1rem auto;
+    }
+
+    .bills-student-header {
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+
+    .bills-student-header h1 {
+        font-size: 2rem;
+    }
+
+    .quick-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .filter-grid-student {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-actions-student {
+        justify-content: stretch;
+    }
+
+    .filter-actions-student .btn-student {
+        flex: 1;
+    }
+
+    .action-buttons-student {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .bills-table-student th,
+    .bills-table-student td {
+        padding: 1rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .action-buttons-student .btn-student {
+        justify-content: center;
+    }
+}
+
+
+/* Animation */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bills-table-student tbody tr {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.bills-table-student tbody tr:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.bills-table-student tbody tr:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.bills-table-student tbody tr:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+
+/* Ensure modal is visible */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-hover);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray);
+    z-index: 1;
+}
+
+
+/* Make sure action buttons are visible */
+
+.action-buttons-student {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.action-buttons-student .btn-student {
+    min-width: auto;
+    white-space: nowrap;
+}
+
+
+/* Highlight unpaid rows */
+
+.bills-table-student tbody tr:hover {
+    background: #f8f9fa;
+}
+
+
+/* Ensure pay button stands out */
+
+.btn-success-student {
+    background: var(--success) !important;
+    border: none !important;
+}
+
+.btn-success-student:hover {
+    background: #27ae60 !important;
+    transform: translateY(-2px);
+}

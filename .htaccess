@@ -1,0 +1,28 @@
+# ================================
+# ✅ FIX rewrite loop + cho phép truy cập ảnh, CSS, JS
+# ================================
+
+<IfModule mod_rewrite.c>
+    Options +FollowSymLinks
+    RewriteEngine On
+
+    # Base path tự động (dành cho localhost hoặc domain ảo)
+    RewriteBase /
+
+    # 👉 Bỏ qua thư mục assets, uploads, img, css, js... để ảnh hiển thị bình thường
+    RewriteCond %{REQUEST_URI} ^/(assets|uploads|images|img|css|js|fonts|vendor)/ [NC]
+    RewriteRule ^ - [L]
+
+    # 👉 Nếu file hoặc thư mục thật sự tồn tại, hiển thị trực tiếp
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 👉 Các request còn lại có thể điều hướng về index.php (tùy bạn)
+    # RewriteRule ^ index.php [L]
+</IfModule>
+
+# Cho phép truy cập file tĩnh
+<FilesMatch "\.(jpg|jpeg|png|gif|css|js|svg|ico|webp|woff|woff2|ttf)$">
+    Require all granted
+</FilesMatch>

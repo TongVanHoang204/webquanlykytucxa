@@ -1,0 +1,666 @@
+/* ===================== */
+/* log.css - Refactored for Dark Mode */
+/* Using global.css variables */
+/* ===================== */
+
+.log-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    animation: log-fade-in 0.25s ease-out;
+}
+
+@keyframes log-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ===================== */
+/* Header + summary      */
+/* ===================== */
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.log-header h1 {
+    font-size: 22px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+}
+
+.log-header small,
+.log-header div {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.log-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--bg);
+    /* or a lighter brand shade */
+    color: var(--brand);
+    font-size: 12px;
+    border: 1px solid var(--stroke);
+}
+
+
+/* ===================== */
+/* Tabs loại log         */
+/* ===================== */
+
+.log-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.log-tab {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: var(--card);
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.18s ease;
+    box-shadow: var(--shadow);
+}
+
+.log-tab:hover {
+    background: var(--bg);
+    border-color: var(--primary-light);
+}
+
+.log-tab.active {
+    background: var(--gradient-primary);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+
+/* ===================== */
+/* Bộ lọc                */
+/* ===================== */
+
+.log-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--card);
+    /* was gradient, card is safer for dark mode */
+    border: 1px solid var(--stroke);
+    box-shadow: var(--shadow);
+}
+
+.log-filters .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 190px;
+    flex: 1;
+}
+
+.log-filters label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.log-filters input,
+.log-filters select {
+    padding: 7px 9px;
+    border-radius: 9px;
+    border: 1px solid var(--stroke);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.log-filters input:focus,
+.log-filters select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+}
+
+
+/* nút áp dụng + reset */
+
+.log-filters .btn-reset {
+    align-self: flex-end;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: var(--card);
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    transition: all 0.15s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.log-filters .btn-reset:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+
+/* ===================== */
+/* Bảng log              */
+/* ===================== */
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.log-table thead {
+    background: var(--bg);
+    /* or gradient primary if preferred */
+    border-bottom: 1px solid var(--stroke);
+}
+
+.log-table th,
+.log-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--stroke);
+    text-align: left;
+    vertical-align: top;
+    color: var(--text);
+}
+
+.log-table th {
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.log-table tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* hiệu ứng hover từng dòng */
+.log-table tbody tr {
+    transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.log-table tbody tr:hover {
+    background: var(--bg);
+}
+
+
+/* ===================== */
+/* Badge loại log        */
+/* ===================== */
+
+.badge-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.badge-type::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+/* Colors need to be readable in both modes. Using vars or hardcoded specific hues that work on dark/light */
+.badge-type.activity {
+    background: rgba(37, 99, 235, 0.2);
+    color: #3b82f6;
+    /* brighter blue for dark mode readability */
+}
+
+.badge-type.history {
+    background: rgba(217, 119, 6, 0.2);
+    color: #f59e0b;
+}
+
+.badge-type.system {
+    background: rgba(220, 38, 38, 0.2);
+    color: #ef4444;
+}
+
+
+/* ===================== */
+/* Nội dung cột          */
+/* ===================== */
+
+.log-action {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.log-module {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.log-user {
+    font-size: 12px;
+    color: var(--text);
+}
+
+.log-user div {
+    margin-top: 2px;
+}
+
+.log-ip {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+
+/* mô tả: giới hạn chiều cao, cho scroll nếu quá dài */
+.log-table td:nth-child(4) {
+    max-width: 320px;
+}
+
+.log-table td:nth-child(4) .log-description {
+    max-height: 52px;
+    overflow: auto;
+    padding-right: 4px;
+    color: var(--text);
+}
+
+
+/* dòng trống */
+.empty-row {
+    text-align: center;
+    padding: 18px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+
+/* ===================== */
+/* Phân trang            */
+/* ===================== */
+
+.pagination {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.pagination a {
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    font-size: 12px;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    transition: all 0.15s ease;
+}
+
+.pagination a:hover:not(.active):not(.disabled) {
+    background: var(--bg);
+    border-color: var(--primary-light);
+}
+
+.pagination a.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
+}
+
+.pagination a.disabled {
+    pointer-events: none;
+    opacity: .45;
+}
+
+
+/* ===================== */
+/* Responsive            */
+/* ===================== */
+
+@media (max-width: 900px) {
+    .log-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .log-filters {
+        flex-direction: column;
+    }
+
+    .log-filters .field {
+        min-width: 100%;
+    }
+
+    .log-table th:nth-child(3),
+    .log-table td:nth-child(3),
+    .log-table th:nth-child(4),
+    .log-table td:nth-child(4) {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .log-page {
+        padding: 16px;
+    }
+
+    .log-table {
+        font-size: 12px;
+    }
+
+    .log-table th,
+    .log-table td {
+        padding: 7px 8px;
+    }
+}
+
+
+/* ===================== */
+/* ANIMATIONS EXTRA      */
+/* ===================== */
+
+@keyframes row-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.log-table tbody tr {
+    animation: row-fade-in 0.22s ease-out;
+}
+
+/* Hiệu ứng hover nổi nhẹ cho từng dòng */
+.log-table tbody tr:hover {
+    background: var(--bg);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    /* Needs adjustment for dark mode visibility, but OK */
+}
+
+/* Tabs: active tab có hiệu ứng “glow nhẹ” một lần khi vào trang */
+@keyframes tab-appear {
+    from {
+        transform: translateY(2px);
+        box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+    }
+
+    to {
+        transform: translateY(0);
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+}
+
+.log-tab.active {
+    animation: tab-appear 0.28s ease-out;
+}
+
+/* Badge loại log: pop nhẹ khi hover */
+.badge-type {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.badge-type:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+    filter: brightness(1.02);
+}
+
+/* Nút filter: press animation khi click */
+.log-filters .btn-reset {
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.log-filters .btn-reset:active {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25) inset;
+}
+
+/* Tổng số log: shimmer nhẹ khi load */
+@keyframes chip-shimmer {
+    0% {
+        box-shadow: 0 0 0 rgba(79, 70, 229, 0);
+        transform: translateY(1px);
+    }
+
+    60% {
+        box-shadow: 0 0 0 6px rgba(129, 140, 248, 0.25);
+        transform: translateY(0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(79, 70, 229, 0);
+    }
+}
+
+.log-summary-chip {
+    animation: chip-shimmer 0.7s ease-out;
+}
+
+/* IP + UA: rung nhẹ khi hover (gợi ý có tooltip) */
+.log-ip {
+    transition: transform 0.12s ease, color 0.12s ease;
+}
+
+.log-ip:hover {
+    transform: translateY(-1px);
+    color: var(--text);
+}
+
+/* Mô tả: hiển thị thanh scroll mượt hơn */
+.log-description {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) transparent;
+}
+
+.log-description::-webkit-scrollbar {
+    width: 6px;
+}
+
+.log-description::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.log-description::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 999px;
+}
+
+
+/* ===================== */
+/* THAO TÁC: XEM / XÓA   */
+/* ===================== */
+
+.log-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 80px;
+    align-items: center;
+    /* Center buttons */
+}
+
+.log-actions form {
+    margin: 0;
+}
+
+/* Nút chung */
+.log-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-decoration: none;
+    white-space: nowrap;
+    line-height: 1;
+    user-select: none;
+    animation: action-fade-in 0.25s ease-out;
+}
+
+@keyframes action-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.log-btn::before {
+    font-size: 13px;
+}
+
+/* Nút Xem */
+.log-btn-view {
+    background: rgba(55, 48, 163, 0.1);
+    border-color: rgba(55, 48, 163, 0.2);
+    color: var(--primary);
+    /* Use primary for visibility */
+}
+
+.log-btn-view::before {
+    content: "👁️";
+}
+
+.log-btn-view:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+/* Nút Xóa */
+.log-btn-delete {
+    background: rgba(185, 28, 28, 0.1);
+    border-color: rgba(185, 28, 28, 0.2);
+    color: #ef4444;
+}
+
+.log-btn-delete::before {
+    content: "🗑️";
+}
+
+.log-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+
+/* Chip hiển thị UA (Thiết bị (UA…)) */
+.ua-chip {
+    font-size: 11px;
+    color: var(--primary);
+    cursor: help;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.ua-chip::before {
+    content: "📱";
+    font-size: 11px;
+}
+
+/* Responsive: trên mobile xếp ngang cho dễ bấm */
+@media (max-width: 640px) {
+    .log-actions {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+}
+
+/* Description chỉ hiển thị 1 dòng */
+.log-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+    white-space: normal;
+    cursor: pointer;
+}
+
+/* Ẩn scrollbar hoàn toàn trong log description (redundant but kept for specificity) */
+.log-description {
+    scrollbar-width: none;
+}
+
+.log-description::-webkit-scrollbar {
+    display: none;
+}

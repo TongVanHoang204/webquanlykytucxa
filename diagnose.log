@@ -1,0 +1,24 @@
+Current Database: quanlyktx
+--- ALL TABLES ---
+accesscards
+adminnotifications
+announcements
+announcementviews
+buildings
+contractlogs
+contracts
+faculties
+feedbacks
+invoices
+notifications
+password_resets
+payments
+postcomments
+postlikes
+posts
+roomrequests
+rooms
+students
+systemlogs
+users
+--- END OF TABLES ---

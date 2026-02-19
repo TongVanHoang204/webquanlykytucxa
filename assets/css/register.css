@@ -1,0 +1,556 @@
+:root {
+    --bg1: #0f172a;
+    --bg2: #1d4ed8;
+    --bg3: #22d3ee;
+    --card-bg: rgba(255, 255, 255, 0.96);
+    --card-border: rgba(255, 255, 255, 0.5);
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --danger: #ef4444;
+    --success: #16a34a;
+    --text-main: #0f172a;
+    --text-muted: #6b7280;
+    --text-soft: #9ca3af;
+    --border-subtle: #e5e7eb;
+    --shadow-soft: 0 22px 45px rgba(15, 23, 42, 0.25);
+    --radius-lg: 18px;
+    --radius-lg: 18px;
+    --radius-pill: 999px;
+}
+
+[data-theme="dark"] {
+    --bg1: #0f172a;
+    --bg2: #1e1b4b;
+    --card-bg: rgba(30, 41, 59, 0.95);
+    --card-border: rgba(148, 163, 184, 0.1);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-soft: #64748b;
+    --border-subtle: #334155;
+    --input-bg: #1e293b;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.30) 0, transparent 55%), radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.35) 0, transparent 50%), linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+
+
+/* ========== WRAPPER & CARD ========== */
+
+.auth-wrapper {
+    max-width: 480px;
+    width: 100%;
+}
+
+.auth-card {
+    position: relative;
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 26px 24px 22px;
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--card-border);
+    overflow: hidden;
+}
+
+
+/* Accent glow */
+
+.auth-card::before {
+    content: "";
+    position: absolute;
+    inset: -120px;
+    background: radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.12) 0, transparent 55%), radial-gradient(circle at 100% 0, rgba(56, 189, 248, 0.14) 0, transparent 55%);
+    opacity: 0.75;
+    z-index: -1;
+}
+
+
+/* ========== HEADER ========== */
+
+.auth-header {
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.auth-header h2 {
+    margin: 0 0 6px;
+    font-size: 1.45rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.auth-header h2 i {
+    color: var(--primary);
+}
+
+.auth-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+
+/* ========== FORM LAYOUT ========== */
+
+form {
+    margin-top: 16px;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.form-row+.form-row {
+    margin-top: 12px;
+}
+
+.input-group {
+    flex: 1 1 100%;
+}
+
+@media (min-width: 640px) {
+    .form-row .input-group {
+        flex: 1 1 0;
+    }
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+
+
+/* ========== INPUT WITH ICON ========== */
+
+.input-with-icon {
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-subtle);
+    padding: 0 12px;
+    background: var(--input-bg, #f9fafb);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.08s ease;
+}
+
+.input-with-icon:focus-within {
+    border-color: var(--primary);
+    background: var(--input-bg-focus, #ffffff);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+    transform: translateY(-1px);
+}
+
+.input-with-icon i {
+    margin-right: 8px;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+}
+
+.input-with-icon input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 10px 0;
+    background: transparent;
+    color: var(--text-main);
+}
+
+.input-with-icon input::placeholder {
+    color: #d1d5db;
+}
+
+
+/* ========== PASSWORD WRAPPER / TOGGLE ========== */
+
+.password-wrapper {
+    position: relative;
+    padding-right: 40px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-soft);
+    transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.toggle-password i {
+    font-size: 0.95rem;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+    transform: scale(1.02);
+}
+
+
+/* ========== HINT / MATCH MESSAGES ========== */
+
+.hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+
+.hint.success {
+    color: var(--success);
+}
+
+.hint.error {
+    color: var(--danger);
+}
+
+
+/* ========== PASSWORD STRENGTH BAR ========== */
+
+.password-strength {
+    margin-top: 6px;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.strength-bar {
+    height: 100%;
+    width: 0;
+    transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.strength-bar.weak {
+    width: 33%;
+    background: var(--danger);
+}
+
+.strength-bar.medium {
+    width: 66%;
+    background: #f59e0b;
+}
+
+.strength-bar.strong {
+    width: 100%;
+    background: var(--success);
+}
+
+
+/* ========== ALERTS ========== */
+
+.alert {
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    margin-top: 14px;
+}
+
+.alert-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alert-title i {
+    font-size: 0.95rem;
+}
+
+.alert-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.alert-success {
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.alert-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.alert-list li {
+    margin: 2px 0;
+}
+
+
+/* Ẩn box lỗi client */
+
+.hidden {
+    display: none;
+}
+
+
+/* ========== BUTTON CHÍNH ========== */
+
+.btn-primary {
+    margin-top: 18px;
+    width: 100%;
+    border: none;
+    outline: none;
+    border-radius: var(--radius-pill);
+    background: var(--primary);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 11px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 16px 38px rgba(37, 99, 235, 0.40);
+    transition: background 0.18s ease, transform 0.08s ease, box-shadow 0.18s ease;
+}
+
+.btn-primary i {
+    font-size: 0.95rem;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.48);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 9px 22px rgba(37, 99, 235, 0.32);
+}
+
+
+/* ========== SOCIAL LOGIN ========== */
+
+.social-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.social-divider span {
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.social-divider p {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.social-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.btn-social {
+    flex: 1 1 calc(50% - 10px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #111827;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
+}
+
+.btn-social i {
+    font-size: 1rem;
+}
+
+.btn-social:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+    background: #f9fafb;
+}
+
+.btn-social:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10);
+}
+
+
+/* Google */
+
+.btn-google {
+    border-color: #e5e7eb;
+}
+
+.btn-google i {
+    color: #ea4335;
+}
+
+
+/* Facebook */
+
+.btn-facebook {
+    border-color: #dbeafe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.btn-facebook i {
+    color: #1d4ed8;
+}
+
+
+/* Nếu sau này dùng GitHub thì tái sử dụng */
+
+.btn-github {
+    border-color: #111827;
+    background: #111827;
+    color: #f9fafb;
+}
+
+.btn-github i {
+    color: #f9fafb;
+}
+
+
+/* Mobile: social full width */
+
+@media (max-width: 480px) {
+    .btn-social {
+        flex: 1 1 100%;
+    }
+}
+
+
+/* ========== FOOTER ========== */
+
+.auth-footer {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.auth-footer a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+
+/* ========== ANIMATIONS ========== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shakeX {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20%,
+    60% {
+        transform: translateX(-6px);
+    }
+
+    40%,
+    80% {
+        transform: translateX(6px);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideIn {
+    animation: slideIn 0.35s ease-out;
+}
+
+.animate-shakeX {
+    animation: shakeX 0.4s ease;
+}
+
+
+/* ========== RESPONSIVE TWEAKS ========== */
+
+@media (max-width: 520px) {
+    .auth-card {
+        padding: 22px 18px 18px;
+    }
+
+    .auth-header h2 {
+        font-size: 1.25rem;
+    }
+}

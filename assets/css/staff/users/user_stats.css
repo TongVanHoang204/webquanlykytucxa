@@ -1,0 +1,506 @@
+/* user_stats.css */
+/* Refactored to use global.css variables */
+
+:root {
+    /* Variables handled by global.css */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.6;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Header */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 35px 40px;
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.page-header h2 {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 2.2rem;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.page-header h2 i {
+    font-size: 2.4rem;
+}
+
+
+/* Cards */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    animation: slideInUp 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+.card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.card:nth-child(1)::before {
+    background: var(--gradient-primary);
+}
+
+.card:nth-child(2)::before {
+    background: var(--gradient-success);
+}
+
+.card:nth-child(3)::before {
+    background: var(--gradient-warning);
+}
+
+.card:nth-child(4)::before {
+    background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+}
+
+.card .k {
+    font-size: 1.1rem;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card .v {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.card .v[style*="color:var(--success)"] {
+    background: var(--gradient-success);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card .tiny {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-bottom: 10px;
+}
+
+
+/* Role badges in card */
+
+.card .tiny .role {
+    display: inline-block;
+    margin: 2px 4px 2px 0;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+
+/* Grid Layout */
+
+.grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+@media (max-width: 1024px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Panels */
+
+.panel {
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+    transition: var(--transition);
+}
+
+.panel:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.panel h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--stroke);
+}
+
+
+/* Chart Containers */
+
+#monthlyChart,
+#roleChart {
+    max-height: 300px;
+}
+
+
+/* Table Styles */
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+th,
+td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--stroke);
+    color: var(--text);
+}
+
+th {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tbody tr {
+    transition: var(--transition);
+}
+
+tbody tr:hover {
+    background: var(--bg);
+    transform: translateX(4px);
+}
+
+
+/* Role Badges */
+
+.role {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.role.r-admin {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
+
+.role.r-manager {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+    border: 1px solid var(--warning);
+}
+
+.role.r-student {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+
+/* Progress indicators for cards */
+
+.progress-indicator {
+    height: 6px;
+    background: var(--stroke);
+    border-radius: 10px;
+    margin-top: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-indicator span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+}
+
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 25px;
+    }
+
+    .page-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .cards {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .card {
+        padding: 25px;
+    }
+
+    .panel {
+        padding: 25px;
+    }
+
+    .card .v {
+        font-size: 2.5rem;
+    }
+
+    th,
+    td {
+        padding: 14px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header {
+        padding: 20px;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .panel {
+        padding: 20px;
+    }
+
+    th,
+    td {
+        padding: 12px 14px;
+        font-size: 0.9rem;
+    }
+
+    .role {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+}
+
+
+/* Additional animations */
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.card:hover .v {
+    animation: pulse 2s infinite;
+}
+
+
+/* Print Styles */
+
+@media print {
+    body {
+        background: white !important;
+        padding: 0 !important;
+    }
+
+    .card,
+    .panel {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .card:hover,
+    .panel:hover {
+        transform: none !important;
+    }
+}
+
+
+/* Custom scrollbar for table */
+
+.table-wrap::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 4px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+
+/* Status colors for growth indicator */
+
+.growth-positive {
+    color: var(--success) !important;
+}
+
+.growth-negative {
+    color: var(--danger) !important;
+}
+
+.growth-neutral {
+    color: var(--muted) !important;
+}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ký túc xá 3D Interactive — 5 tầng (A1–A5), 6 phòng/tầng (A101–A106)</title>
+  <style>
+    :root { --bg:#0a0a0a; --fg:#ffffff; --panel:#0f1014; --line:#1f2230; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    #app { height:100%; display:grid; grid-template-rows:auto auto 1fr; }
+    header { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line); background:linear-gradient(180deg, #0f0f12, #0a0a0a); position:sticky; top:0; z-index:5; }
+    .title { font-weight:700; letter-spacing:.2px; }
+    .badge { display:inline-block; font-size:11px; opacity:.8; border:1px solid var(--line); padding:2px 8px; border-radius:999px; margin-left:8px;}
+    .toolbar { padding:8px 14px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:10px; background:#0b0b0e; }
+    .btn { background:#1e1e24; border:1px solid #2a2a33; color:#eaeaea; padding:8px 12px; border-radius:10px; cursor:pointer; transition:.15s; font-weight:600; }
+    .btn:hover { background:#2a2a33; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    select { background:#18181c; color:#fff; border:1px solid #2a2a33; border-radius:10px; padding:8px 12px; }
+    .rooms { display:flex; gap:6px; flex-wrap:wrap; }
+    .room-btn { padding:6px 10px; border-radius:8px; border:1px solid #2a2a33; background:#14141a; cursor:pointer; }
+    .room-btn:hover { background:#1c1c22; }
+    #canvas-wrap { position:relative; height: calc(100vh - 120px); display:grid; grid-template-columns: 1fr 320px; }
+    #canvas-container { position:relative; }
+    #panel { background:var(--panel); border-left:1px solid var(--line); padding:14px; overflow:auto; }
+    #panel h3 { margin:8px 0 10px; font-size:16px; }
+    #panel .kv { font-size:14px; border-bottom:1px dashed #2a2a33; padding:6px 0; }
+    #panel .status { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; }
+    .st-available { background:#143b1f; color:#9de1a7; border:1px solid #265b38; }
+    .st-occupied { background:#3a1a12; color:#ffb59e; border:1px solid #5c2b20; }
+    .st-maint { background:#3b350f; color:#f0e38b; border:1px solid #5b521e; }
+    .hint { position:absolute; right:12px; bottom:12px; background:rgba(0,0,0,.5); border:1px solid #333; padding:8px 10px; border-radius:10px; font-size:12px; }
+    .hint kbd{ background:#222; border:1px solid #333; padding:1px 6px; border-radius:6px; }
+    #roomTooltip { display:none; position:fixed; z-index:100; background:rgba(0,0,0,0.85); padding:10px 12px; border-radius:8px; color:#fff; font-size:13px; border:1px solid #2a2a33; pointer-events:none; }
+    .room-label { color: white; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 6px; border: 1px solid #2a2a33; font-size: 11px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <img src="assets/icon.png" alt="icon" width="20" height="20"/>
+    <div class="title">Ký túc xá 3D — Interactive</div>
+    <span class="badge">5 tầng A1–A5 · 6 phòng/tầng A10X</span>
+    <span class="badge">Kéo xoay · Cuộn zoom</span>
+  </header>
+
+  <div class="toolbar">
+    <button id="btnBuilding" class="btn">Xem Tòa nhà</button>
+    <label>Tầng:</label>
+    <select id="floorSelect"></select>
+    <div class="rooms" id="roomsWrap"></div>
+  </div>
+
+  <div id="canvas-wrap">
+    <div id="canvas-container">
+      <div class="hint">Hover phòng để xem chi tiết · Click để bay vào</div>
+    </div>
+    <aside id="panel">
+      <h3>Thông tin phòng</h3>
+      <div id="panelContent">Chọn một phòng ở mặt tiền để xem chi tiết.</div>
+    </aside>
+  </div>
+</div>
+
+<div id="roomTooltip"></div>
+
+<!-- CDN: Three r128 (OrbitControls + CSS2DRenderer) + GSAP -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+<script src="js/dormitory3d.js"></script>
+</body>
+</html>

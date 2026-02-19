@@ -1,0 +1,273 @@
+.payment-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.payment-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.payment-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+}
+
+.payment-header .invoice-info {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.invoice-summary {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+}
+
+.invoice-summary h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 20px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-row.total {
+    font-size: 20px;
+    font-weight: bold;
+    color: #667eea;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 2px solid #667eea;
+}
+
+.summary-label {
+    color: #666;
+}
+
+.summary-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.payment-method-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+}
+
+.payment-method-section h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 20px;
+}
+
+.method-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+
+/* VNPay / MoMo */
+
+.qr-section {
+    text-align: center;
+    padding: 30px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.qr-code {
+    width: 280px;
+    height: 280px;
+    margin: 20px auto;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.qr-placeholder {
+    color: #999;
+    font-size: 14px;
+}
+
+.scan-instruction {
+    margin-top: 20px;
+    color: #666;
+    font-size: 15px;
+}
+
+.scan-instruction i {
+    color: #667eea;
+    margin-right: 8px;
+}
+
+
+/* Chuyển khoản */
+
+.bank-info {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.bank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.bank-row:last-child {
+    border-bottom: none;
+}
+
+.bank-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.bank-value {
+    color: #333;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.copy-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+    transition: all 0.3s;
+}
+
+.copy-btn:hover {
+    background: #5568d3;
+}
+
+.copy-btn i {
+    margin-right: 5px;
+}
+
+.transfer-note {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.transfer-note strong {
+    color: #856404;
+}
+
+.transfer-note p {
+    margin: 5px 0 0 0;
+    color: #856404;
+    font-size: 14px;
+}
+
+
+/* Buttons */
+
+.payment-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    flex: 1;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    text-align: center;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #28a745;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background: #ffc107;
+    color: #856404;
+}
+
+@media (max-width: 768px) {
+    .payment-container {
+        padding: 15px;
+    }
+    .payment-actions {
+        flex-direction: column;
+    }
+    .qr-code {
+        width: 240px;
+        height: 240px;
+    }
+}

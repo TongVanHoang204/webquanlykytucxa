@@ -1,0 +1,306 @@
+/* Biến CSS cho màu sắc và kích thước */
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --background-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --border-radius: 8px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
+
+/* Reset và style cơ bản */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+
+/* Page Header */
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+}
+
+
+/* Card */
+
+.card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: var(--primary-color);
+    color: white;
+}
+
+.card-header i {
+    margin-right: 0.5rem;
+}
+
+.card-header h2 {
+    font-size: 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+
+/* Contract Details */
+
+.contract-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.detail-item label i {
+    margin-right: 0.5rem;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.detail-item .price {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-pending {
+    background: var(--warning-color);
+    color: white;
+}
+
+.status-inactive {
+    background: var(--danger-color);
+    color: white;
+}
+
+
+/* Roommates List */
+
+.roommates-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.roommate-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.roommate-card:hover {
+    transform: scale(1.02);
+}
+
+.roommate-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.roommate-info h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.roommate-info p {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+
+/* No Roommates */
+
+.no-roommates {
+    text-align: center;
+    padding: 2rem;
+}
+
+.no-roommates i {
+    font-size: 3rem;
+    color: var(--secondary-color);
+    margin-bottom: 1rem;
+}
+
+.no-roommates h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+
+/* Actions */
+
+.actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn i {
+    margin-right: 0.5rem;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+
+/* Empty State */
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--secondary-color);
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    .contract-details {
+        grid-template-columns: 1fr;
+    }
+    .roommates-list {
+        grid-template-columns: 1fr;
+    }
+    .actions {
+        flex-direction: column;
+    }
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

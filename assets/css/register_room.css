@@ -1,0 +1,917 @@
+/* register_room.css */
+
+
+/* mặc định light theme */
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --secondary: #7209b7;
+    --success: #2ecc71;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --info: #3498db;
+    --light: #f8f9fa;
+    --dark: #2c3e50;
+    --gray: #6c757d;
+    --gray-light: #e9ecef;
+    --border-radius: 16px;
+    --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    --box-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
+    --transition: all 0.3s ease;
+}
+
+/* ============================================
+   DARK MODE OVERRIDES
+   ============================================ */
+
+/* Cards & containers */
+body[data-theme="dark"] .student-info-card,
+body[data-theme="dark"] .room-card,
+body[data-theme="dark"] .room-card.v2,
+body[data-theme="dark"] .empty-state,
+body[data-theme="dark"] .alert,
+body[data-theme="dark"] .payment-instructions,
+body[data-theme="dark"] .room-search-form,
+body[data-theme="dark"] .search-form-container {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e9eefb;
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Headings */
+body[data-theme="dark"] .student-details h3,
+body[data-theme="dark"] .section-header h2,
+body[data-theme="dark"] .room-info h3,
+body[data-theme="dark"] .room-title,
+body[data-theme="dark"] .empty-state h3,
+body[data-theme="dark"] .alert h4 {
+    color: #e9eefb !important;
+}
+
+/* Muted text */
+body[data-theme="dark"] .student-details p,
+body[data-theme="dark"] .section-header p,
+body[data-theme="dark"] .room-info p,
+body[data-theme="dark"] .room-meta,
+body[data-theme="dark"] .meta-desc span,
+body[data-theme="dark"] .meta-item span,
+body[data-theme="dark"] .empty-state p,
+body[data-theme="dark"] .alert p,
+body[data-theme="dark"] .payment-instructions p {
+    color: #9fb0d0 !important;
+}
+
+/* Filter form elements */
+body[data-theme="dark"] .filter-item label {
+    color: #e9eefb !important;
+}
+
+body[data-theme="dark"] .filter-item select,
+body[data-theme="dark"] .filter-item input {
+    background: #0b1220;
+    color: #e9eefb;
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Buttons */
+body[data-theme="dark"] .btn-room-outline {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #e9eefb;
+}
+
+body[data-theme="dark"] .btn-room-disabled {
+    background: rgba(255, 255, 255, 0.04);
+    color: #9fb0d0;
+}
+
+body[data-theme="dark"] .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e9eefb;
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Room card footer border */
+body[data-theme="dark"] .room-card-footer {
+    border-top-color: rgba(255, 255, 255, 0.14);
+}
+
+/* QR code and empty state icons */
+body[data-theme="dark"] .qr-code-image {
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme="dark"] .empty-state i {
+    color: #9fb0d0;
+}
+
+/* SweetAlert2 dark mode */
+body[data-theme="dark"] .swal2-popup {
+    background: #1a2332 !important;
+    color: #e9eefb !important;
+}
+
+body[data-theme="dark"] .swal2-title {
+    color: #e9eefb !important;
+}
+
+body[data-theme="dark"] .swal2-html-container {
+    color: #9fb0d0 !important;
+}
+
+
+/* Main Container */
+
+.registration-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+
+/* Header Section */
+
+.registration-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 3rem 2.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.registration-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" preserveAspectRatio="none"><path d="M0,50 Q250,30 500,50 T1000,50 L1000,100 L0,100 Z" fill="rgba(255,255,255,0.1)"/></svg>') bottom center no-repeat;
+    background-size: cover;
+}
+
+.registration-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.registration-header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+    position: relative;
+}
+
+
+/* Student Info Card */
+
+.student-info-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--info);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.student-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+}
+
+.student-details h3 {
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+    font-size: 1.4rem;
+}
+
+.student-details p {
+    color: var(--gray);
+    margin: 0.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.text-success {
+    color: var(--success) !important;
+    font-weight: 600;
+}
+
+.text-warning {
+    color: var(--warning) !important;
+    font-weight: 600;
+}
+
+
+/* Section Header */
+
+.section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 0 1rem;
+}
+
+.section-header h2 {
+    font-size: 2.2rem;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+}
+
+.section-header p {
+    font-size: 1.1rem;
+    color: var(--gray);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+
+/* Room Grid */
+
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+
+/* Room Card */
+
+.room-card {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    position: relative;
+    border: 1px solid var(--gray-light);
+}
+
+.room-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.room-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    z-index: 2;
+}
+
+.room-image {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    border-bottom: 1px solid var(--gray-light);
+    transition: var(--transition);
+}
+
+.room-card:hover .room-image {
+    transform: scale(1.05);
+}
+
+.room-info {
+    padding: 1.75rem;
+}
+
+.room-info h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+    color: var(--dark);
+    font-weight: 700;
+}
+
+.room-info p {
+    color: var(--gray);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+
+/* Buttons */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.125rem 2rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(67, 97, 238, 0.4);
+}
+
+
+/* Alert Styles */
+
+.alert {
+    padding: 1.75rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    border-left: 5px solid;
+    position: relative;
+    background: white;
+    box-shadow: var(--box-shadow);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #fde8e8 0%, #fadbd8 100%);
+    color: var(--danger);
+    border-left-color: var(--danger);
+}
+
+.alert h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.alert p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.text-center {
+    text-align: center;
+}
+
+
+/* Empty State */
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin: 2rem 0;
+}
+
+.empty-state i {
+    font-size: 4.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--gray-light);
+}
+
+.empty-state h3 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    color: var(--dark);
+    font-weight: 600;
+}
+
+.empty-state p {
+    color: var(--gray);
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.empty-state .btn {
+    width: auto;
+    display: inline-flex;
+    margin: 0.25rem;
+}
+
+
+/* Registration Form */
+
+.registration-form {
+    margin-top: 1.5rem;
+}
+
+
+/* Deposit Badge */
+
+.deposit-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: linear-gradient(135deg, var(--warning), var(--danger));
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    z-index: 3;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+
+/* Loading State */
+
+.btn-loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.btn-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* QR Code Modal Styles */
+
+.qr-modal-content {
+    text-align: center;
+    padding: 1rem;
+}
+
+.qr-code-image {
+    width: 230px;
+    height: 230px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    margin: 0 auto 1.5rem;
+    border: 2px solid var(--gray-light);
+}
+
+.payment-instructions {
+    background: var(--light);
+    padding: 1.25rem;
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.payment-instructions p {
+    margin: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.transaction-code {
+    background: var(--dark);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    display: inline-block;
+    margin: 0.25rem 0;
+}
+
+
+/* Responsive Design */
+
+@media (max-width: 1200px) {
+    .room-grid {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .registration-container {
+        padding: 0 1rem;
+        margin: 1rem auto;
+    }
+
+    .registration-header {
+        padding: 2rem 1.5rem;
+    }
+
+    .registration-header h1 {
+        font-size: 2rem;
+    }
+
+    .room-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .student-info-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .qr-code-image {
+        width: 200px;
+        height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .registration-header {
+        padding: 1.5rem 1rem;
+    }
+
+    .registration-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .room-info {
+        padding: 1.25rem;
+    }
+
+    .btn {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+
+    .empty-state .btn {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+}
+
+
+/* Animation */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.room-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.room-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.room-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.room-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.room-card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+
+/* SweetAlert2 Customization */
+
+.swal2-popup {
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--box-shadow-hover) !important;
+    font-family: inherit !important;
+}
+
+.swal2-confirm {
+    background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%) !important;
+    border: none !important;
+    border-radius: var(--border-radius) !important;
+    padding: 0.75rem 2rem !important;
+    font-weight: 600 !important;
+}
+
+.swal2-cancel {
+    background: var(--gray-light) !important;
+    border: none !important;
+    border-radius: var(--border-radius) !important;
+    padding: 0.75rem 2rem !important;
+    font-weight: 600 !important;
+    color: var(--dark) !important;
+}
+
+
+/* Flex Utilities */
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+
+/* Text Utilities */
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+
+/* Margin Utilities */
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+.mb-3 {
+    margin-bottom: 1.5rem;
+}
+
+
+/* Grid bao phòng */
+
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+
+/* Card version 2 */
+
+.room-card.v2 {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.room-card.v2:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+}
+
+
+/* Ảnh + badge */
+
+.room-card-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.room-card-image img {
+    width: 100%;
+    display: block;
+    height: 210px;
+    object-fit: cover;
+}
+
+.deposit-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(245, 158, 11, 0.95);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(4px);
+}
+
+.deposit-badge i {
+    font-size: 13px;
+}
+
+
+/* Body */
+
+.room-card-body {
+    padding: 16px 18px 10px;
+}
+
+.room-title {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.room-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.meta-item i {
+    width: 18px;
+    text-align: center;
+    color: #2563eb;
+}
+
+.meta-desc span {
+    color: #4b5563;
+}
+
+
+/* Footer / CTA */
+
+.room-card-footer {
+    padding: 12px 18px 16px;
+    border-top: 1px solid #eef2ff;
+    margin-top: auto;
+    display: flex;
+    justify-content: flex-start;
+}
+
+
+/* Nút chung */
+
+.btn-room {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+
+/* Primary */
+
+.btn-room-primary {
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-room-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.45);
+}
+
+
+/* Outline (hoàn thiện hồ sơ) */
+
+.btn-room-outline {
+    border: 1px solid #7c3aed;
+    color: #6d28d9;
+    background: #f5f3ff;
+}
+
+.btn-room-outline:hover {
+    background: #ede9fe;
+}
+
+
+/* Disabled */
+
+.btn-room-disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.room-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+    /* canh giữa */
+    padding: 20px 0;
+}
+
+.room-card {
+    width: 420px;
+    /* ❗ chiều ngang cố định, không kéo full */
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: 0.25s ease;
+}
+
+.room-card:hover {
+    transform: translateY(-6px);
+}
+
+.room-card img.room-image {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 18px 18px 0 0;
+}

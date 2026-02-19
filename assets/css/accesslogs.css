@@ -1,0 +1,259 @@
+/* =============================
+   ⭐ LAYOUT TỔNG
+============================= */
+
+.announcement-page {
+    max-width: 920px;
+    margin: 40px auto;
+    padding: 20px 16px;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    color: #1e293b;
+}
+
+/* Explicit Dark Mode Overrides */
+[data-theme="dark"] .announcement-page {
+    color: var(--text);
+}
+
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .announcement-header h1,
+[data-theme="dark"] .announcement-card {
+    color: var(--text);
+}
+
+[data-theme="dark"] .page-header p,
+[data-theme="dark"] .announcement-header p,
+[data-theme="dark"] .announcement-meta,
+[data-theme="dark"] .announcement-content,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .empty-state i {
+    color: var(--muted);
+}
+
+[data-theme="dark"] .unread-info {
+    background: var(--card);
+    color: var(--muted);
+}
+
+[data-theme="dark"] .announcement-card,
+[data-theme="dark"] .announcement-container {
+    background: var(--card);
+    border-color: var(--stroke);
+    color: var(--text);
+}
+
+[data-theme="dark"] .announcement-card:hover {
+    background: var(--bg);
+}
+
+[data-theme="dark"] .announcement-card.unread {
+    background: rgba(239, 68, 68, 0.1);
+    /* Red tint for dark mode */
+}
+
+
+.page-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.page-header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.page-header p {
+    color: #64748b;
+    margin-top: 6px;
+}
+
+
+/* Badge số thông báo chưa đọc */
+
+.unread-info {
+    margin-top: 10px;
+    font-size: 15px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    display: inline-block;
+    color: #475569;
+}
+
+.unread-info strong {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+
+/* =============================
+   ⭐ DANH SÁCH THÔNG BÁO
+============================= */
+
+.announcement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.announcement-card {
+    display: block;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(6px);
+    border-left: 6px solid #0ea5e9;
+    /* màu mặc định */
+    padding: 18px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #0f172a;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    transition: all .25s ease;
+    position: relative;
+}
+
+.announcement-card:hover {
+    transform: translateY(-3px);
+    background: #f8fafc;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+
+/* Card chưa đọc */
+
+.announcement-card.unread {
+    border-left-color: #ef4444;
+    background: #fff5f5;
+}
+
+
+/* Card đã đọc */
+
+.announcement-card.read {
+    border-left-color: #22c55e;
+    opacity: 0.92;
+}
+
+
+/* Badge "Mới" */
+
+.badge-unread {
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+}
+
+
+/* Dấu chấm đỏ (unread) */
+
+.announcement-card.unread::before {
+    content: "";
+    width: 11px;
+    height: 11px;
+    background: #ef4444;
+    border-radius: 50%;
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+
+/* Meta */
+
+.announcement-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+
+/* =============================
+   ⭐ TRANG CHI TIẾT THÔNG BÁO
+============================= */
+
+.announcement-container {
+    max-width: 830px;
+    margin: 40px auto 60px;
+    background: white;
+    padding: 32px;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.announcement-header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.announcement-header p {
+    color: #475569;
+    margin-top: 6px;
+}
+
+
+/* Nội dung */
+
+.announcement-content {
+    margin-top: 22px;
+    line-height: 1.7;
+    color: #334155;
+    white-space: pre-wrap;
+    font-size: 16px;
+}
+
+
+/* =============================
+   ⭐ BUTTON
+============================= */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+    background: #0ea5e9;
+    transition: .2s;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn:hover {
+    background: #0284c7;
+}
+
+.btn-secondary {
+    background: #64748b;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+
+/* =============================
+   ⭐ EMPTY STATE
+============================= */
+
+.empty-state {
+    text-align: center;
+    margin: 50px 0;
+    color: #64748b;
+}
+
+.empty-state i {
+    font-size: 45px;
+    margin-bottom: 12px;
+    color: #94a3b8;
+}

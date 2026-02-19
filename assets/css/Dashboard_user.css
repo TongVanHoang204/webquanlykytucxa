@@ -1,0 +1,496 @@
+/* ========= DASHBOARD DÙNG THEME CHUNG ========= */
+
+
+/* Giữ bộ màu cũ làm accent nếu thích */
+
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --primary-light: #4895ef;
+    --secondary: #7209b7;
+    --success: #4cc9f0;
+    --danger: #e63946;
+    --warning: #f4a261;
+    --info: #4895ef;
+    --border-radius: 16px;
+    --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    --box-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.18);
+    --transition: all 0.3s ease;
+}
+
+
+/* Nền dashboard phụ thuộc theme */
+
+.student-dashboard {
+    min-height: 100vh;
+    padding: 2rem;
+    background: var(--bg);
+    color: var(--text);
+}
+
+
+/* Light: nền gradient sáng nhẹ */
+
+body[data-theme="light"] .student-dashboard {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%);
+}
+
+
+/* Dark: nền tối sâu hơn 1 chút */
+
+body[data-theme="dark"] .student-dashboard {
+    background: radial-gradient(circle at top, var(--bg-elev) 0, var(--bg) 55%, #020617 100%);
+}
+
+
+/* ===== HEADER DASHBOARD ===== */
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: var(--card);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--stroke);
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.dashboard-header h2 {
+    font-size: 2.4rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.dashboard-header p {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+
+/* ===== GRID 4 THẺ MENU CHÍNH ===== */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto 3rem;
+}
+
+.dashboard-card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+/* Gradient border animation */
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 50%, #7c3aed 100%);
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+
+/* Glow effect */
+
+.dashboard-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient( circle at center, rgba(59, 130, 246, 0.15), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(59, 130, 246, 0.25);
+    border-color: transparent;
+}
+
+.dashboard-card:hover::before {
+    opacity: 1;
+}
+
+.dashboard-card:hover::after {
+    opacity: 1;
+}
+
+
+/* Icon lớn ở trên cùng */
+
+.icon-box {
+    position: relative;
+    z-index: 1;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(39, 159, 251, 0.1), rgba(184, 143, 255, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 8px 25px rgba(244, 248, 255, 0.15);
+}
+
+.icon-box i {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.4s ease;
+}
+
+.dashboard-card:hover .icon-box {
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    transform: scale(1.15) rotate(10deg);
+    box-shadow: 0 15px 40px rgba(204, 222, 251, 0.4);
+}
+
+.dashboard-card:hover .icon-box i {
+    -webkit-text-fill-color: #fff;
+    transform: scale(1.1);
+}
+
+
+/* Tiêu đề và mô tả */
+
+.dashboard-card h3 {
+    font-size: 1.3rem;
+    margin: 0 0 0.8rem;
+    color: var(--text);
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+    transition: color 0.3s ease;
+}
+
+.dashboard-card:hover h3 {
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dashboard-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+    transition: color 0.3s ease;
+}
+
+.dashboard-card:hover p {
+    color: var(--text);
+}
+
+
+/* Màu riêng cho từng card */
+
+.dashboard-card:nth-child(1) .icon-box {
+    background: linear-gradient(135deg, rgba(244, 162, 97, 0.1), rgba(229, 57, 70, 0.1));
+}
+
+.dashboard-card:nth-child(1):hover .icon-box {
+    background: linear-gradient(135deg, #f4a261, #e53946);
+}
+
+.dashboard-card:nth-child(2) .icon-box {
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.1), rgba(67, 97, 238, 0.1));
+}
+
+.dashboard-card:nth-child(2):hover .icon-box {
+    background: linear-gradient(135deg, #4cc9f0, #4361ee);
+}
+
+.dashboard-card:nth-child(3) .icon-box {
+    background: linear-gradient(135deg, rgba(114, 9, 183, 0.1), rgba(124, 58, 237, 0.1));
+}
+
+.dashboard-card:nth-child(3):hover .icon-box {
+    background: linear-gradient(135deg, #7209b7, #7c3aed);
+}
+
+.dashboard-card:nth-child(4) .icon-box {
+    background: linear-gradient(135deg, rgba(72, 149, 239, 0.1), rgba(59, 130, 246, 0.1));
+}
+
+.dashboard-card:nth-child(4):hover .icon-box {
+    background: linear-gradient(135deg, #4895ef, #3b82f6);
+}
+
+
+/* Responsive */
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    .dashboard-card {
+        padding: 2rem 1.5rem;
+    }
+    .icon-box {
+        width: 75px;
+        height: 75px;
+    }
+    .icon-box i {
+        font-size: 2rem;
+    }
+}
+
+
+/* ===== QUICK STATS (nếu dùng) ===== */
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto 3rem;
+}
+
+.stat-card {
+    background: var(--card);
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--stroke);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #fff;
+}
+
+
+/* Giữ gradient cũ làm màu nhấn */
+
+.stat-icon.bill {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+}
+
+.stat-icon.room {
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+}
+
+.stat-icon.feedback {
+    background: linear-gradient(135deg, #45b7d1, #96c93d);
+}
+
+.stat-icon.announcement {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.stat-content h4 {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.stat-content .number {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+
+
+/* ===== HOẠT ĐỘNG GẦN ĐÂY ===== */
+
+.recent-activity {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    padding: 1.75rem 1.5rem;
+    box-shadow: var(--box-shadow);
+    max-width: 1400px;
+    margin: 0 auto 1.5rem;
+    border: 1px solid var(--stroke);
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--stroke);
+}
+
+.activity-header h3 {
+    font-size: 1.25rem;
+    color: var(--text);
+    margin: 0;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .75rem;
+    border-radius: 12px;
+    transition: var(--transition);
+}
+
+.activity-item:hover {
+    background: rgba(148, 163, 253, 0.08);
+}
+
+.activity-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1rem;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-content p {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.activity-time {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 768px) {
+    .student-dashboard {
+        padding: 1.25rem;
+    }
+    .dashboard-header {
+        padding: 1.5rem 1.25rem;
+    }
+    .dashboard-header h2 {
+        font-size: 1.9rem;
+    }
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-card {
+        padding: 1.5rem 1.25rem;
+    }
+    .quick-stats {
+        grid-template-columns: 1fr;
+    }
+    .activity-item {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-grid,
+    .quick-stats {
+        gap: 1rem;
+    }
+    .stat-card {
+        padding: 1rem 1rem;
+    }
+}
+
+
+/* Animation nhẹ khi load */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-card {
+    animation: fadeInUp .5s ease forwards;
+}
+
+.dashboard-card:nth-child(1) {
+    animation-delay: .05s;
+}
+
+.dashboard-card:nth-child(2) {
+    animation-delay: .1s;
+}
+
+.dashboard-card:nth-child(3) {
+    animation-delay: .15s;
+}
+
+.dashboard-card:nth-child(4) {
+    animation-delay: .2s;
+}

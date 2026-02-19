@@ -1,0 +1,613 @@
+/* staff_invoice.css */
+/* Refactored to use global.css variables */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.invoice-container {
+    padding: 30px;
+    max-width: 1800px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+
+/* Page Header */
+.page-header {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--stroke);
+    z-index: 100;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.page-header h2 {
+    color: var(--text);
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.page-header h2 i {
+    color: var(--primary);
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--primary), var(--info));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+
+/* Search Form */
+.search-form {
+    display: flex;
+    background: var(--bg);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: var(--transition);
+    flex: 1;
+    max-width: 500px;
+    min-width: 300px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.search-form:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1), 0 8px 25px rgba(67, 97, 238, 0.15);
+    transform: translateY(-2px);
+}
+
+.search-form input {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    outline: none;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.search-form input::placeholder {
+    color: var(--muted);
+}
+
+.search-form button {
+    padding: 15px 25px;
+    background: var(--gradient-primary);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.search-form button:hover {
+    background: var(--primary-light);
+    transform: scale(1.05);
+}
+
+
+/* Auto Gen Alert */
+.auto-gen-alert {
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    border-radius: var(--border-radius);
+    padding: 22px 28px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: var(--text);
+    box-shadow: var(--shadow);
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.auto-gen-alert i {
+    font-size: 2.2rem;
+    color: var(--success);
+    animation: pulse 2s infinite;
+}
+
+.auto-gen-alert h4 {
+    margin: 0 0 6px;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+
+/* THỐNG KÊ */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+    padding: 4px 0;
+    position: relative;
+    z-index: 100;
+    align-items: stretch;
+}
+
+.stat-card {
+    background: var(--card);
+    padding: 18px 14px;
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--stroke);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 110px;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--gradient-primary);
+    transition: var(--transition);
+}
+
+.stat-card.unpaid::before {
+    background: var(--gradient-warning);
+}
+
+.stat-card.paid::before {
+    background: var(--gradient-success);
+}
+
+.stat-card.overdue::before {
+    background: linear-gradient(135deg, #e63946 0%, #d00000 100%);
+}
+
+.stat-card.collected::before {
+    background: linear-gradient(135deg, #5cd49e 0%, #55d49f 100%);
+}
+
+.stat-card.uncollected::before {
+    background: linear-gradient(135deg, #9b2226 0%, #6a040f 100%);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: var(--shadow-lg);
+    z-index: 10;
+}
+
+.stat-card:hover::before {
+    height: 7px;
+}
+
+.stat-card .stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 6px 0 2px;
+    color: var(--text);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card.unpaid .stat-number {
+    color: var(--warning);
+}
+
+.stat-card.paid .stat-number {
+    color: var(--success);
+}
+
+.stat-card.overdue .stat-number {
+    color: #e63946;
+}
+
+.stat-card.collected .stat-number {
+    color: #2d6a4f;
+}
+
+.stat-card.uncollected .stat-number {
+    color: #9b2226;
+}
+
+.stat-card .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    font-weight: 600;
+}
+
+
+/* Filters */
+.filters {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    padding: 28px;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: end;
+    position: relative;
+    border: 1px solid var(--stroke);
+}
+
+.filters::before {
+    content: 'Lọc hóa đơn';
+    position: absolute;
+    top: -12px;
+    left: 24px;
+    background: var(--gradient-primary);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
+.filter-group select {
+    padding: 13px 18px;
+    border: 2px solid var(--stroke);
+    border-radius: var(--border-radius-sm);
+    background: var(--bg);
+    font-size: 0.98rem;
+    transition: var(--transition);
+    outline: none;
+    cursor: pointer;
+    font-weight: 500;
+    appearance: none;
+    padding-right: 40px;
+    min-width: 220px;
+    color: var(--text);
+}
+
+.filter-group select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+
+/* Invoice Table */
+.invoice-table {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 1px solid var(--stroke);
+    position: relative;
+}
+
+.invoice-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.invoice-table thead {
+    background: var(--gradient-primary);
+}
+
+.invoice-table thead th {
+    padding: 22px 18px;
+    text-align: left;
+    color: white;
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+}
+
+.invoice-table tbody tr {
+    border-bottom: 1px solid var(--stroke);
+    transition: var(--transition);
+}
+
+.invoice-table tbody tr:hover {
+    background: rgba(67, 97, 238, 0.04);
+    transform: scale(1.006);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.09);
+    position: relative;
+    z-index: 10;
+}
+
+.invoice-table td {
+    padding: 20px 18px;
+    vertical-align: middle;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.invoice-table .amount {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text);
+}
+
+.invoice-table .amount.paid {
+    color: var(--success);
+}
+
+.invoice-table .amount.overdue {
+    color: #e63946;
+}
+
+
+/* Status Badge */
+.status-badge {
+    padding: 9px 18px;
+    border-radius: 22px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+}
+
+.status-badge.chưa-thanh-toán {
+    background: rgba(247, 37, 133, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(247, 37, 133, 0.3);
+}
+
+.status-badge.đã-thanh-toán {
+    background: rgba(76, 201, 240, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(76, 201, 240, 0.3);
+}
+
+.status-badge.quá-hạn {
+    background: rgba(230, 57, 70, 0.15);
+    color: #e63946;
+    border: 1px solid rgba(230, 57, 70, 0.3);
+}
+
+
+/* Action Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--border-radius-sm);
+    text-decoration: none;
+    transition: var(--transition);
+    border: 2px solid transparent;
+    font-size: 1.05rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: var(--transition);
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-view {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+    border-color: rgba(67, 97, 238, 0.2);
+}
+
+.btn-view:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-3px) scale(1.12);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.35);
+}
+
+.btn-delete {
+    background: rgba(230, 57, 70, 0.1);
+    color: #e63946;
+    border-color: rgba(230, 57, 70, 0.2);
+}
+
+.btn-delete:hover {
+    background: #e63946;
+    color: white;
+    transform: translateY(-3px) scale(1.12);
+    box-shadow: 0 8px 25px rgba(230, 57, 70, 0.35);
+}
+
+
+/* No Data */
+.no-data {
+    text-align: center;
+    padding: 90px 20px;
+    color: var(--muted);
+    background: var(--card);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+}
+
+.no-data i {
+    font-size: 4.5rem;
+    margin-bottom: 22px;
+    color: var(--stroke);
+}
+
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .invoice-container {
+        padding: 20px;
+    }
+
+    .stats-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .invoice-table thead {
+        display: none;
+    }
+
+    .invoice-table tbody tr {
+        display: block;
+        margin-bottom: 22px;
+        border: 1px solid var(--stroke);
+        border-radius: var(--border-radius-sm);
+        padding: 16px;
+    }
+
+    .invoice-table td {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px dashed var(--stroke);
+    }
+
+    .invoice-table td:last-child {
+        border-bottom: none;
+    }
+
+    .invoice-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 0.82rem;
+        letter-spacing: 0.9px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .search-form {
+        max-width: none;
+        margin: 15px 0;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters::before {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .stats-container {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+
+    .page-header h2 {
+        font-size: 1.8rem;
+    }
+}
+
+/* Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.invoice-container>* {
+    animation: fadeInUp 0.7s ease-out;
+}
+
+.invoice-container>*:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.invoice-container>*:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.invoice-container>*:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.invoice-container>*:nth-child(4) {
+    animation-delay: 0.4s;
+}

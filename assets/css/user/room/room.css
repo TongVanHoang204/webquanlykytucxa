@@ -1,0 +1,671 @@
+/* Tổng thể trang "Phòng Ở Của Tôi" – THEME SÁNG */
+
+body.my-room-page {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #f3f4ff 0, #e5edff 35%, #f9fafb 100%);
+    color: #0f172a;
+    margin: 0;
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* ============================================
+   DARK MODE OVERRIDES  
+   ============================================ */
+
+/* Body */
+body[data-theme="dark"].my-room-page,
+body[data-theme="dark"] {
+    background: #0b1220 !important;
+    color: #e9eefb;
+}
+
+/* Cards */
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .roommate-card,
+body[data-theme="dark"] .empty-state {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #e9eefb;
+    box-shadow: none;
+}
+
+/* Card header border */
+body[data-theme="dark"] .card-header {
+    border-bottom-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Headings & strong text */
+body[data-theme="dark"] .card-header h2,
+body[data-theme="dark"] .page-title h1,
+body[data-theme="dark"] .student-card h2,
+body[data-theme="dark"] .date-item .value,
+body[data-theme="dark"] .detail-item p,
+body[data-theme="dark"] .roommate-info h4,
+body[data-theme="dark"] .empty-state h3,
+body[data-theme="dark"] .empty-state b,
+body[data-theme="dark"] .meta-value,
+body[data-theme="dark"] .highlight-item .value,
+body[data-theme="dark"] .no-roommates h3 {
+    color: #e9eefb !important;
+}
+
+/* Muted / secondary text */
+body[data-theme="dark"] .page-title p,
+body[data-theme="dark"] .student-card .muted,
+body[data-theme="dark"] .meta-label,
+body[data-theme="dark"] .highlight-item .label,
+body[data-theme="dark"] .date-item .label,
+body[data-theme="dark"] .detail-item label,
+body[data-theme="dark"] .progress-header,
+body[data-theme="dark"] .roommate-info .muted,
+body[data-theme="dark"] .no-roommates,
+body[data-theme="dark"] .no-roommates i,
+body[data-theme="dark"] .empty-state p,
+body[data-theme="dark"] .muted,
+body[data-theme="dark"] .page-header {
+    color: #9fb0d0 !important;
+}
+
+/* Tag badge */
+body[data-theme="dark"] .tag.subtle {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
+}
+
+/* Buttons */
+body[data-theme="dark"] .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e9eefb;
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme="dark"] .btn-secondary:hover {
+    border-color: #60a5fa;
+}
+
+body[data-theme="dark"] .btn-ghost {
+    color: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+body[data-theme="dark"] .btn-ghost:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* Progress bar background */
+body[data-theme="dark"] .progress-bar {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Status badges in dark mode */
+body[data-theme="dark"] .status-active {
+    background: rgba(34, 197, 94, 0.15) !important;
+    color: #4ade80 !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+body[data-theme="dark"] .status-pending {
+    background: rgba(234, 179, 8, 0.15) !important;
+    color: #facc15 !important;
+    border-color: rgba(234, 179, 8, 0.3) !important;
+}
+
+body[data-theme="dark"] .status-inactive {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Roommate card hover in dark */
+body[data-theme="dark"] .roommate-card:hover {
+    border-color: #60a5fa !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Wrapper chính */
+
+.room-wrapper {
+    max-width: 1100px;
+    margin: 32px auto 48px;
+    padding: 0 16px;
+}
+
+
+/* Header trang */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+    color: #0f172a;
+}
+
+.page-title h1 {
+    font-size: 28px;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-title h1 i {
+    font-size: 24px;
+    color: #2563eb;
+}
+
+.page-title p {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+
+/* Tag nhỏ bên phải */
+
+.tag.subtle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e5edff;
+    color: #1d4ed8;
+    font-size: 12px;
+}
+
+
+/* CARD chung (glassmorphism nhẹ, nền trắng) */
+
+.card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    color: #0f172a;
+}
+
+.card+.card {
+    margin-top: 20px;
+}
+
+.mt-lg {
+    margin-top: 24px;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.card-header h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.card-header i {
+    font-size: 18px;
+    color: #2563eb;
+}
+
+.card-body {
+    padding: 18px;
+}
+
+
+/* Grid 2 cột trên desktop */
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+
+/* CARD sinh viên */
+
+.student-card .card-header {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.student-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 24px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.student-card h2 {
+    margin: 0 0 4px;
+}
+
+.student-card .muted {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.student-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    padding-top: 8px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.meta-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #9ca3af;
+}
+
+.meta-value {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+/* CARD tóm tắt hợp đồng */
+
+.highlight-card .card-header {
+    border-bottom: none;
+    padding-bottom: 4px;
+}
+
+.highlight-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.highlight-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.highlight-item .label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.highlight-item .value {
+    font-weight: 600;
+}
+
+
+/* Giá tiền */
+
+.price {
+    color: #eab308;
+    font-weight: 600;
+}
+
+
+/* Hàng ngày bắt đầu / kết thúc */
+
+.dates-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    margin-top: 8px;
+}
+
+.date-item .label {
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.date-item .value {
+    font-size: 14px;
+    color: #111827;
+}
+
+
+/* Tiến độ hợp đồng */
+
+.contract-progress {
+    margin-top: 10px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+    transition: width .4s ease;
+}
+
+
+/* Chi tiết hợp đồng/phòng dạng grid */
+
+.contract-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 20px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 3px;
+}
+
+.detail-item label i {
+    margin-right: 4px;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 14px;
+    color: #111827;
+}
+
+
+/* Badge trạng thái */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-active {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.status-pending {
+    background: #fef9c3;
+    color: #a16207;
+    border: 1px solid #facc15;
+}
+
+.status-inactive {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+
+/* Bạn cùng phòng */
+
+.roommates-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+.roommate-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.roommate-card:hover {
+    transform: translateY(-2px);
+    border-color: #60a5fa;
+    box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
+}
+
+.roommate-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 20% 20%, #38bdf8, #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+}
+
+.roommate-info h4 {
+    margin: 0 0 2px;
+    font-size: 14px;
+    color: #111827;
+}
+
+.roommate-info .muted {
+    margin: 0;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+
+/* Khi không có bạn cùng phòng */
+
+.no-roommates {
+    text-align: center;
+    padding: 20px 10px;
+    color: #6b7280;
+}
+
+.no-roommates i {
+    font-size: 32px;
+    margin-bottom: 8px;
+    color: #9ca3af;
+}
+
+
+/* Nút hành động */
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .15s ease, color .15s ease, transform .1s ease, box-shadow .1s ease, border-color .15s ease;
+}
+
+.btn i {
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, .35);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 30px rgba(59, 130, 246, .45);
+}
+
+.btn-secondary {
+    background: #ffffff;
+    color: #111827;
+    border-color: #e5e7eb;
+}
+
+.btn-secondary:hover {
+    border-color: #60a5fa;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.btn-ghost:hover {
+    background: #eff6ff;
+}
+
+
+/* Text phụ */
+
+.muted {
+    color: #6b7280;
+}
+
+
+/* Responsive */
+
+@media (max-width: 900px) {
+    .grid-2 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .contract-details-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .contract-details-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .student-meta {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ========== EMPTY STATE: Chưa có hợp đồng phòng ========== */
+
+.empty-state {
+    max-width: 640px;
+    margin: 40px auto;
+    padding: 32px 20px 28px;
+    text-align: center;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    color: #0f172a;
+    animation: emptyFadeIn .35s ease-out;
+}
+
+.empty-state i {
+    color: #2563eb;
+    /* icon giường */
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    margin: 0 0 8px;
+}
+
+.empty-state p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.empty-state b {
+    color: #111827;
+}
+
+/* Nút trong empty-state – tận dụng .btn sẵn có */
+.empty-state .btn {
+    margin-top: 4px;
+}
+
+/* Style riêng cho .btn-success trong empty-state */
+.empty-state .btn-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 10px 22px rgba(34, 197, 94, 0.35);
+}
+
+.empty-state .btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(34, 197, 94, 0.45);
+}
+
+/* Hiệu ứng fade-in nhẹ cho empty-state */
+@keyframes emptyFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive cho mobile */
+@media (max-width: 640px) {
+    .empty-state {
+        margin: 24px 12px 32px;
+        padding: 24px 16px 22px;
+    }
+}

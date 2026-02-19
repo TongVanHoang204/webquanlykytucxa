@@ -1,0 +1,418 @@
+/* staff_student_stats.css */
+/* Refactored to match staff_dashboard.css style */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap');
+
+:root {
+    --blur: 20px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding-top: 90px !important;
+    padding-bottom: 40px;
+    background-image: radial-gradient(circle at 20% 80%, rgba(67, 97, 238, 0.05) 0, transparent 55%), radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0, transparent 55%);
+    transition: background 0.4s ease, color 0.4s ease;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Dashboard Header (Gradient) */
+.dashboard-header {
+    margin-bottom: 30px;
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--gradient-primary);
+    border-radius: var(--border-radius);
+    color: white;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="%23ffffff" opacity="0.1"><polygon points="1000,100 1000,0 0,100"></polygon></svg>');
+    background-size: cover;
+    pointer-events: none;
+}
+
+.header-content {
+    position: relative;
+    z-index: 1;
+}
+
+.header-content h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.header-content p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 600;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-back:hover {
+    background: white;
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Stats Overview (Cards) */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--stroke);
+    border-left: 4px solid transparent;
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card:nth-child(1) {
+    border-left-color: var(--primary);
+    animation-delay: 0.1s;
+}
+
+.stat-card:nth-child(2) {
+    border-left-color: var(--success);
+    animation-delay: 0.2s;
+}
+
+.stat-card:nth-child(3) {
+    border-left-color: var(--warning);
+    animation-delay: 0.3s;
+}
+
+.stat-card:nth-child(4) {
+    border-left-color: var(--secondary);
+    animation-delay: 0.4s;
+}
+
+.stat-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px;
+    font-size: 1.6rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon.total {
+    background: var(--gradient-primary);
+}
+
+.stat-icon.dorm {
+    background: linear-gradient(135deg, var(--success), #05c293);
+}
+
+.stat-icon.nodorm {
+    background: linear-gradient(135deg, var(--warning), #ffc145);
+}
+
+.stat-icon.faculty {
+    background: linear-gradient(135deg, var(--secondary), #a855f7);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+    color: var(--text);
+    font-family: 'Poppins', sans-serif;
+}
+
+.stat-content p {
+    color: var(--muted);
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge.male {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge.female {
+    background: rgba(236, 72, 153, 0.1);
+    color: #ec4899;
+}
+
+.badge.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.badge.info {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+}
+
+/* Charts Grid */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.chart-box {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+}
+
+.chart-box h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--stroke);
+}
+
+.chart-box h3 i {
+    color: var(--primary);
+}
+
+.chart-box canvas {
+    max-height: 300px;
+    width: 100% !important;
+}
+
+/* Detailed Table Section */
+.unified-box {
+    background: var(--card);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--stroke);
+    overflow: hidden;
+}
+
+.box-header {
+    background: var(--bg);
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--stroke);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.box-header h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.3rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+}
+
+.box-header h3 i {
+    color: var(--primary);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: var(--bg);
+    padding: 15px 25px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--stroke);
+}
+
+td {
+    padding: 15px 25px;
+    border-bottom: 1px solid var(--stroke);
+    color: var(--text);
+    vertical-align: middle;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background: rgba(67, 97, 238, 0.02);
+}
+
+.faculty-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.count-col {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Progress Bar in Table */
+.progress-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bg {
+    flex: 1;
+    height: 8px;
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--gradient-primary);
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+}
+
+.pct {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 45px;
+    text-align: right;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+
+    .dashboard-header {
+        padding: 30px 15px;
+    }
+
+    .header-content h1 {
+        font-size: 2rem;
+    }
+
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+
+    th,
+    td {
+        padding: 12px 15px;
+    }
+}
