@@ -9,13 +9,20 @@ requireRole(['Admin', 'Manager']);
 
 $conn->set_charset('utf8mb4');
 
+// Cache faculties for lookup
+$faculties = [];
+$facResult = $conn->query("SELECT FacultyID, FacultyName FROM Faculties");
+while ($fRow = $facResult->fetch_assoc()) {
+    $faculties[$fRow['FacultyName']] = $fRow['FacultyID'];
+}
+
 $previewData = [];
 $errorRows = [];
 $validRows = [];
 $uploadError = '';
 $uploadedFile = '';
 
-// Handle File Upload
+// Handle File Upload & Preview
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
     if ($_FILES['excel_file']['error'] === UPLOAD_ERR_OK) {
         $ext = strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
@@ -34,32 +41,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 if ($xlsx = Shuchkin\SimpleXLSX::parse($targetPath)) {
                     $rows = $xlsx->rows();
                     
-                    // Remove header if present (assuming row 1 is header)
-                    // We can check if first cell is 'MSSV' or similar to be sure, but for now let's assume valid format starts from row 2
-                    // Or better, let's try to detect header
+                    // Detect header row
                     $startIndex = 0;
-                    if (!empty($rows) && (strtoupper($rows[0][0]) === 'MSSV' || strtoupper($rows[0][0]) === 'MASV')) {
+                    if (!empty($rows) && (strtoupper(trim($rows[0][0])) === 'MSSV' || strtoupper(trim($rows[0][0])) === 'MASV' || strtoupper(trim($rows[0][0])) === 'STT')) {
                         $startIndex = 1;
                     }
 
-                    // Prepare statement to check existing StudentCode
+                    // Prepare duplicate check
                     $checkStmt = $conn->prepare("SELECT StudentID FROM Students WHERE StudentCode = ?");
 
                     for ($i = $startIndex; $i < count($rows); $i++) {
                         $row = $rows[$i];
-                        // Expected format: 
-                        // 0: MSSV (Required, Unique)
-                        // 1: FullName (Required)
-                        // 2: Gender (Nam/Nữ)
-                        // 3: Faculty (ID or ignore for now, maybe map by Name?) -> Let's expect FacultyID for simplicity or Name then lookup? 
-                        //    Let's keep it simple: Faculty Name. We will lookup ID. if not found -> null
-                        // 4: ClassName
-                        // 5: CourseYear (Int)
-                        // 6: Phone
-                        // 7: Email
-                        // 8: Address
                         
-                        // Clean data
+                        // Skip completely empty rows
+                        $allEmpty = true;
+                        foreach ($row as $cell) {
+                            if (trim($cell ?? '') !== '') { $allEmpty = false; break; }
+                        }
+                        if ($allEmpty) continue;
+
+                        // Clean data — Expected: MSSV | Họ tên | Giới tính | Khoa | Lớp | Khóa | SĐT | Email | Địa chỉ
                         $studentCode = trim($row[0] ?? '');
                         $fullName    = trim($row[1] ?? '');
                         $gender      = trim($row[2] ?? '');
@@ -72,82 +73,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                         
                         $errors = [];
 
-                        // 1. Validation: Required fields
-                        if (empty($studentCode)) {
-                            $errors[] = 'Thiếu MSSV';
-                        }
-                        if (empty($fullName)) {
-                            $errors[] = 'Thiếu Họ tên';
-                        }
+                        // Validation
+                        if (empty($studentCode)) $errors[] = 'Thiếu MSSV';
+                        if (empty($fullName)) $errors[] = 'Thiếu Họ tên';
                         
-                        // Strict Gender Check
                         if (empty($gender)) {
                             $errors[] = 'Thiếu Giới tính';
                         } elseif (!in_array($gender, ['Nam', 'Nữ'])) {
                             $errors[] = 'Giới tính không hợp lệ (Nam/Nữ)';
                         }
 
-                        // Strict Faculty Check
+                        // Faculty lookup (cached)
                         $facultyID = null;
                         if (empty($facultyName)) {
                             $errors[] = 'Thiếu tên Khoa';
                         } else {
-                            // Check DB
-                            // Optimization: Cache faculties to avoid query loop?
-                            // For now, query is fine for moderate size.
-                            $stmtFac = $conn->prepare("SELECT FacultyID FROM Faculties WHERE FacultyName LIKE ? LIMIT 1");
-                            $likeName = "%$facultyName%";
-                            $stmtFac->bind_param('s', $likeName);
-                            $stmtFac->execute();
-                            $resFac = $stmtFac->get_result();
-                            if ($fRow = $resFac->fetch_assoc()) {
-                                $facultyID = $fRow['FacultyID'];
+                            // Exact match first
+                            if (isset($faculties[$facultyName])) {
+                                $facultyID = $faculties[$facultyName];
                             } else {
-                                $errors[] = 'Khoa không tồn tại';
+                                // Fuzzy match
+                                $found = false;
+                                foreach ($faculties as $fname => $fid) {
+                                    if (stripos($fname, $facultyName) !== false || stripos($facultyName, $fname) !== false) {
+                                        $facultyID = $fid;
+                                        $found = true;
+                                        break;
+                                    }
+                                }
+                                if (!$found) $errors[] = 'Khoa không tồn tại';
                             }
-                            $stmtFac->close();
                         }
 
-                        if (empty($className)) {
-                            $errors[] = 'Thiếu tên Lớp';
-                        }
-                        if ($courseYear <= 0) {
-                            $errors[] = 'Thiếu Khóa';
-                        }
-                        if (!empty($phone) && !preg_match('/^[0-9]{9,11}$/', $phone)) {
-                             $errors[] = 'SĐT không hợp lệ';
-                        }
+                        if (empty($className)) $errors[] = 'Thiếu tên Lớp';
+                        if ($courseYear <= 0) $errors[] = 'Thiếu Khóa';
+                        if (!empty($phone) && !preg_match('/^[0-9]{9,11}$/', $phone)) $errors[] = 'SĐT không hợp lệ';
 
-                        // 2. Validation: Duplicate MSSV in DB
+                        // Duplicate check in DB
                         if (!empty($studentCode)) {
                             $checkStmt->bind_param('s', $studentCode);
                             $checkStmt->execute();
                             $checkStmt->store_result();
                             if ($checkStmt->num_rows > 0) {
-                                $errors[] = 'MSSV đã tồn tại';
+                                $errors[] = 'MSSV đã tồn tại trong DB';
                             }
                         }
 
-                        // 3. Validation: Duplicate in current file
+                        // Duplicate check in current file
                         foreach ($validRows as $vr) {
                             if ($vr['StudentCode'] === $studentCode) {
                                 $errors[] = 'Trùng MSSV trong file';
                                 break;
                             }
                         }
-                        
-                        // Check duplicates in errorRows too? No, usually just unique in file.
-                        // Actually, if duplicate in file, both might be error if we don't handle carefully.
-                        // But let's stick to validRows check.
-                        
-                        // Map Faculty Name to ID (Done above)
 
                         $rowData = [
                             'StudentCode' => $studentCode,
                             'FullName'    => $fullName,
                             'Gender'      => $gender,
                             'FacultyID'   => $facultyID,
-                            'FacultyName' => $facultyName, // For display
+                            'FacultyName' => $facultyName,
                             'ClassName'   => $className,
                             'CourseYear'  => $courseYear,
                             'Phone'       => $phone,
@@ -166,7 +151,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
 
                 } else {
                     $uploadError = Shuchkin\SimpleXLSX::parseError();
-                    // Fallback invalid file
                 }
             } else {
                 $uploadError = 'Lỗi lưu file upload';
@@ -176,52 +160,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         $uploadError = 'Lỗi upload file: ' . $_FILES['excel_file']['error'];
     }
 }
-
-// Handle Import Action (AJAX or Form Submit from Preview)
-// Actually, we can just use a separate file for the action to keep it clean, or post back here.
-// The plan said `student_import_action.php`, let's stick to that for the final commit.
-
 ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Import Sinh viên | Hệ thống Ký túc xá</title>
-    <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        .import-container { padding: 20px; max-width: 1200px; margin: 20px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .btn { padding: 8px 15px; border-radius: 5px; text-decoration: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-weight: 500; transition: all 0.2s; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-secondary { background: #6b7280; color: white; }
-        .btn-success { background: #10b981; color: white; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        
-        .upload-area { border: 2px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 8px; margin-bottom: 20px; transition: border-color 0.3s; }
-        .upload-area:hover { border-color: #3b82f6; background: #f8fafc; }
-        .alert { padding: 10px 15px; border-radius: 5px; margin-bottom: 15px; }
-        .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-        .stats-summary { display: flex; gap: 20px; margin-bottom: 20px; }
-        .stat-box { padding: 15px; border-radius: 6px; flex: 1; text-align: center; font-weight: bold; }
-        .stat-valid { background: #d1fae5; color: #047857; }
-        .stat-invalid { background: #fee2e2; color: #b91c1c; }
 
-        .table-wrap { overflow-x: auto; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
-        .table th, .table td { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; }
-        .table th { background: #f1f5f9; font-weight: 600; }
-        .row-error { background: #fef2f2; }
-        .text-danger { color: #dc2626; font-weight: bold; }
-        
-        .guide { margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 6px; border-left: 4px solid #3b82f6; }
-        .guide h4 { margin-top: 0; }
-        .guide ul { padding-left: 20px; margin-bottom: 0; }
-    </style>
+    <link rel="stylesheet" href="../../../assets/css/staff/student_import.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body>
+
     <div class="import-container">
         <div class="page-header">
             <h2><i class="fa-solid fa-file-import"></i> Nhập Sinh viên từ Excel</h2>
@@ -235,95 +178,209 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         <?php if (empty($validRows) && empty($errorRows)): ?>
             <!-- STEP 1: UPLOAD FORM -->
             <form method="post" enctype="multipart/form-data" id="uploadForm">
-                <div class="upload-area">
-                    <i class="fa-solid fa-cloud-arrow-up fa-3x" style="color: #cbd5e1; margin-bottom: 15px;"></i>
-                    <h3>Kéo thả hoặc chọn file Excel (.xlsx)</h3>
-                    <p class="muted">Chỉ hỗ trợ file .xlsx. Dòng đầu tiên là tiêu đề.</p>
-                    <input type="file" name="excel_file" accept=".xlsx" required style="margin-top: 10px;">
-                    <br><br>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-upload"></i> Tải lên & Xem trước</button>
-                    
-                    <div style="margin-top: 20px;">
-                        <a href="download_template.php" class="btn btn-secondary" style="font-size: 0.8em; padding: 5px 10px;">
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <h3>Kéo thả file Excel vào đây</h3>
+                    <p class="muted">hoặc click để chọn file — chỉ hỗ trợ <strong>.xlsx</strong></p>
+                    <input type="file" name="excel_file" id="fileInput" accept=".xlsx" required>
+                    <div class="file-name" id="fileName" style="display: none;">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span id="fileNameText"></span>
+                    </div>
+                    <div class="upload-actions">
+                        <button type="submit" class="btn btn-primary" id="uploadBtn" style="display: none;">
+                            <i class="fa-solid fa-upload"></i> Tải lên & Xem trước
+                        </button>
+                        <a href="download_template.php" class="btn btn-secondary btn-sm">
                             <i class="fa-solid fa-download"></i> Tải file mẫu
                         </a>
                     </div>
                 </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill" id="progressBar"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Đang xử lý...</div>
+                </div>
             </form>
 
             <div class="guide">
-                <h4>Hướng dẫn file Excel:</h4>
-                <p>Thứ tự các cột bắt buộc: <strong>MSSV | Họ tên | Giới tính | Tên Khoa | Lớp | Khóa | SĐT | Email | Địa chỉ</strong></p>
+                <h4><i class="fa-solid fa-circle-info"></i> Hướng dẫn file Excel</h4>
+                <p>Thứ tự các cột: <strong>MSSV | Họ tên | Giới tính | Tên Khoa | Lớp | Khóa | SĐT | Email | Địa chỉ</strong></p>
                 <ul>
-                    <li><strong>MSSV</strong>: Phải là duy nhất, chưa tồn tại trong hệ thống.</li>
-                    <li><strong>Giới tính</strong>: "Nam" hoặc "Nữ".</li>
-                    <li>Các cột khác có thể để trống, nhưng khuyến khích điền đầy đủ.</li>
+                    <li><strong>MSSV</strong> — Bắt buộc, phải duy nhất, chưa tồn tại trong hệ thống</li>
+                    <li><strong>Họ tên</strong> — Bắt buộc</li>
+                    <li><strong>Giới tính</strong> — Bắt buộc, chỉ "Nam" hoặc "Nữ"</li>
+                    <li><strong>Tên Khoa</strong> — Bắt buộc, phải khớp với Khoa trong hệ thống</li>
+                    <li><strong>Lớp, Khóa</strong> — Bắt buộc</li>
+                    <li><strong>SĐT, Email, Địa chỉ</strong> — Không bắt buộc nhưng khuyến khích điền</li>
                 </ul>
             </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput');
+                const fileName = document.getElementById('fileName');
+                const fileNameText = document.getElementById('fileNameText');
+                const uploadBtn = document.getElementById('uploadBtn');
+                const uploadForm = document.getElementById('uploadForm');
+                const progressContainer = document.getElementById('progressContainer');
+
+                // Click to select file
+                dropZone.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn')) return;
+                    fileInput.click();
+                });
+
+                // Drag & Drop
+                ['dragenter', 'dragover'].forEach(evt => {
+                    dropZone.addEventListener(evt, (e) => {
+                        e.preventDefault();
+                        dropZone.classList.add('dragover');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(evt => {
+                    dropZone.addEventListener(evt, (e) => {
+                        e.preventDefault();
+                        dropZone.classList.remove('dragover');
+                    });
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].name.endsWith('.xlsx')) {
+                        fileInput.files = files;
+                        showFileName(files[0].name);
+                    } else {
+                        Swal.fire('Lỗi', 'Chỉ hỗ trợ file .xlsx', 'error');
+                    }
+                });
+
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length > 0) {
+                        showFileName(fileInput.files[0].name);
+                    }
+                });
+
+                function showFileName(name) {
+                    fileNameText.textContent = name;
+                    fileName.style.display = 'inline-flex';
+                    uploadBtn.style.display = 'inline-flex';
+                }
+
+                // Show progress on submit
+                uploadForm.addEventListener('submit', () => {
+                    progressContainer.style.display = 'block';
+                    uploadBtn.disabled = true;
+                    uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+                    
+                    let progress = 0;
+                    const bar = document.getElementById('progressBar');
+                    const text = document.getElementById('progressText');
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 15;
+                        if (progress > 90) progress = 90;
+                        bar.style.width = progress + '%';
+                        text.textContent = `Đang phân tích file... ${Math.round(progress)}%`;
+                    }, 300);
+                });
+            });
+            </script>
 
         <?php else: ?>
             <!-- STEP 2: PREVIEW & CONFIRM -->
             <div class="stats-summary">
+                <div class="stat-box stat-total">
+                    <span class="stat-number"><?= count($validRows) + count($errorRows) ?></span>
+                    <span class="stat-label">Tổng dòng</span>
+                </div>
                 <div class="stat-box stat-valid">
-                    <i class="fa-solid fa-check-circle"></i> Hợp lệ: <?= count($validRows) ?>
+                    <span class="stat-number"><?= count($validRows) ?></span>
+                    <span class="stat-label">Hợp lệ</span>
                 </div>
                 <div class="stat-box stat-invalid">
-                    <i class="fa-solid fa-times-circle"></i> Lỗi: <?= count($errorRows) ?>
+                    <span class="stat-number"><?= count($errorRows) ?></span>
+                    <span class="stat-label">Lỗi</span>
                 </div>
             </div>
 
-            <?php if (!empty($validRows)): ?>
-                <div style="margin-bottom: 20px; text-align: right;">
-                    <form id="confirmForm" action="student_import_action.php" method="POST" style="display: inline;">
-                        <input type="hidden" name="filename" value="<?= htmlspecialchars($uploadedFile) ?>">
-                        <button type="button" onclick="confirmImport()" class="btn btn-success">
-                            <i class="fa-solid fa-file-import"></i> Nhập <?= count($validRows) ?> sinh viên hợp lệ
-                        </button>
-                    </form>
+            <div class="action-bar">
+                <div class="left-actions">
+                    <?php if (!empty($validRows)): ?>
+                        <form id="confirmForm" action="student_import_action.php" method="POST" style="display: inline;">
+                            <input type="hidden" name="filename" value="<?= htmlspecialchars($uploadedFile) ?>">
+                            <button type="button" onclick="confirmImport()" class="btn btn-success">
+                                <i class="fa-solid fa-file-import"></i> Nhập <?= count($validRows) ?> sinh viên hợp lệ
+                            </button>
+                        </form>
+                    <?php endif; ?>
                     <a href="student_import.php" class="btn btn-danger"><i class="fa-solid fa-xmark"></i> Hủy bỏ</a>
                 </div>
-            <?php else: ?>
-                <div class="alert alert-error">Không có dòng nào hợp lệ để nhập. Vui lòng kiểm tra lại file.</div>
-                <a href="student_import.php" class="btn btn-secondary">Thử lại</a>
+            </div>
+
+            <?php if (empty($validRows)): ?>
+                <div class="alert alert-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    Không có dòng nào hợp lệ để nhập. Vui lòng kiểm tra lại file Excel.
+                </div>
             <?php endif; ?>
 
             <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
+                            <th>#</th>
                             <th>Trạng thái</th>
-                            <th>Lý do / Ghi chú</th>
                             <th>MSSV</th>
                             <th>Họ tên</th>
                             <th>Giới tính</th>
                             <th>Khoa</th>
                             <th>Lớp</th>
+                            <th>Khóa</th>
+                            <th>SĐT</th>
+                            <th>Email</th>
+                            <th>Lý do lỗi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Error Rows First -->
-                        <?php foreach ($errorRows as $row): ?>
+                        <?php 
+                        $rowNum = 1;
+                        // Error rows first
+                        foreach ($errorRows as $row): 
+                        ?>
                             <tr class="row-error">
-                                <td style="color: #dc2626; text-align: center;"><i class="fa-solid fa-times-circle"></i> Lỗi</td>
-                                <td class="text-danger"><?= htmlspecialchars($row['Reasons']) ?></td>
+                                <td><?= $rowNum++ ?></td>
+                                <td><span class="status-err"><i class="fa-solid fa-times-circle"></i> Lỗi</span></td>
                                 <td><?= htmlspecialchars($row['StudentCode']) ?></td>
                                 <td><?= htmlspecialchars($row['FullName']) ?></td>
                                 <td><?= htmlspecialchars($row['Gender']) ?></td>
                                 <td><?= htmlspecialchars($row['FacultyName']) ?></td>
                                 <td><?= htmlspecialchars($row['ClassName']) ?></td>
+                                <td><?= $row['CourseYear'] ?: '—' ?></td>
+                                <td><?= htmlspecialchars($row['Phone']) ?: '—' ?></td>
+                                <td><?= htmlspecialchars($row['Email']) ?: '—' ?></td>
+                                <td class="error-reasons"><?= htmlspecialchars($row['Reasons']) ?></td>
                             </tr>
                         <?php endforeach; ?>
 
-                        <!-- Valid Rows -->
                         <?php foreach ($validRows as $row): ?>
                             <tr>
-                                <td style="color: #059669; text-align: center;"><i class="fa-solid fa-check-circle"></i> OK</td>
-                                <td>Sẵn sàng nhập</td>
+                                <td><?= $rowNum++ ?></td>
+                                <td><span class="status-ok"><i class="fa-solid fa-check-circle"></i> OK</span></td>
                                 <td><?= htmlspecialchars($row['StudentCode']) ?></td>
                                 <td><?= htmlspecialchars($row['FullName']) ?></td>
                                 <td><?= htmlspecialchars($row['Gender']) ?></td>
                                 <td><?= htmlspecialchars($row['FacultyName']) ?></td>
                                 <td><?= htmlspecialchars($row['ClassName']) ?></td>
+                                <td><?= $row['CourseYear'] ?></td>
+                                <td><?= htmlspecialchars($row['Phone']) ?: '—' ?></td>
+                                <td><?= htmlspecialchars($row['Email']) ?: '—' ?></td>
+                                <td>—</td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -333,19 +390,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             <script>
             function confirmImport() {
                 Swal.fire({
-                    title: 'Xác nhận nhập',
-                    text: "Bạn có chắc muốn nhập <?= count($validRows) ?> sinh viên này vào hệ thống?",
+                    title: 'Xác nhận nhập dữ liệu',
+                    html: `Bạn sẽ nhập <strong><?= count($validRows) ?></strong> sinh viên vào hệ thống.<br>
+                           <small style="color:#64748b">Mỗi sinh viên sẽ được tạo tài khoản với mật khẩu mặc định = MSSV</small>`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonColor: '#10b981',
                     cancelButtonColor: '#6b7280',
-                    confirmButtonText: 'Đồng ý nhập',
+                    confirmButtonText: '<i class="fa-solid fa-file-import"></i> Đồng ý nhập',
                     cancelButtonText: 'Hủy'
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        // Show loading
+                        Swal.fire({
+                            title: 'Đang nhập dữ liệu...',
+                            html: 'Vui lòng chờ, không tắt trang.',
+                            allowOutsideClick: false,
+                            didOpen: () => { Swal.showLoading(); }
+                        });
                         document.getElementById('confirmForm').submit();
                     }
-                })
+                });
             }
             </script>
         <?php endif; ?>

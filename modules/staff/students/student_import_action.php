@@ -27,32 +27,39 @@ if (!$xlsx) {
     exit;
 }
 
+// Cache faculties
+$faculties = [];
+$facResult = $conn->query("SELECT FacultyID, FacultyName FROM Faculties");
+while ($fRow = $facResult->fetch_assoc()) {
+    $faculties[$fRow['FacultyName']] = $fRow['FacultyID'];
+}
+
 $rows = $xlsx->rows();
 $startIndex = 0;
-if (!empty($rows) && (strtoupper($rows[0][0]) === 'MSSV' || strtoupper($rows[0][0]) === 'MASV')) {
+if (!empty($rows) && (strtoupper(trim($rows[0][0])) === 'MSSV' || strtoupper(trim($rows[0][0])) === 'MASV' || strtoupper(trim($rows[0][0])) === 'STT')) {
     $startIndex = 1;
 }
 
 $successCount = 0;
 $failCount = 0;
-$errors = [];
-
-// Prepare Insert Statement
-// We need to also create a User account for the student (Default password: MSSV)
-// Or maybe just create Student record and let them register?
-// Usually, admin creates account. Let's create User account too.
-// Default password = StudentCode
 
 $conn->begin_transaction();
 
 try {
-    $stmtUser = $conn->prepare("INSERT INTO Users (Username, PasswordHash, Email, Role, CreatedAt) VALUES (?, ?, ?, 'Student', NOW())");
+    $stmtUser = $conn->prepare("INSERT INTO Users (Username, FullName, PasswordHash, Email, Role, CreatedAt) VALUES (?, ?, ?, ?, 'Student', NOW())");
     $stmtStudent = $conn->prepare("INSERT INTO Students (UserID, StudentCode, FullName, Gender, FacultyID, ClassName, CourseYear, Phone, Email, Address, CreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
     $checkStmt = $conn->prepare("SELECT StudentID FROM Students WHERE StudentCode = ?");
 
     for ($i = $startIndex; $i < count($rows); $i++) {
         $row = $rows[$i];
         
+        // Skip empty rows
+        $allEmpty = true;
+        foreach ($row as $cell) {
+            if (trim($cell ?? '') !== '') { $allEmpty = false; break; }
+        }
+        if ($allEmpty) continue;
+
         // Clean data
         $studentCode = trim($row[0] ?? '');
         $fullName    = trim($row[1] ?? '');
@@ -65,77 +72,45 @@ try {
         $address     = trim($row[8] ?? '');
 
         // Validation
-        if (empty($studentCode) || empty($fullName)) {
-            $failCount++;
-            continue;
-        }
-        
-        // Strict Validation (Must match Preview)
-        if (empty($gender) || !in_array($gender, ['Nam', 'Nữ'])) {
-            $failCount++;
-            continue;
-        }
-        if (empty($facultyName)) {
-             $failCount++;
-             continue;
-        }
-        if (empty($className) || $courseYear <= 0) {
-             $failCount++;
-             continue;
-        }
-        // Phone check? Not strictly blocking perhaps in action, but good to be consistent
-        if (!empty($phone) && !preg_match('/^[0-9]{9,11}$/', $phone)) {
-             $failCount++;
-             continue;
-        }
+        if (empty($studentCode) || empty($fullName)) { $failCount++; continue; }
+        if (empty($gender) || !in_array($gender, ['Nam', 'Nữ'])) { $failCount++; continue; }
+        if (empty($facultyName) || empty($className) || $courseYear <= 0) { $failCount++; continue; }
+        if (!empty($phone) && !preg_match('/^[0-9]{9,11}$/', $phone)) { $failCount++; continue; }
 
-        // Check Duplicate
+        // Duplicate check
         $checkStmt->bind_param('s', $studentCode);
         $checkStmt->execute();
         $checkStmt->store_result();
-        if ($checkStmt->num_rows > 0) {
-            $failCount++;
-            continue;
-        }
+        if ($checkStmt->num_rows > 0) { $failCount++; continue; }
 
-        // Map Faculty
+        // Faculty lookup (cached)
         $facultyID = null;
-        // Check DB
-        $stmtFac = $conn->prepare("SELECT FacultyID FROM Faculties WHERE FacultyName LIKE ? LIMIT 1");
-        $likeName = "%$facultyName%";
-        $stmtFac->bind_param('s', $likeName);
-        $stmtFac->execute();
-        $resFac = $stmtFac->get_result();
-        if ($fRow = $resFac->fetch_assoc()) {
-            $facultyID = $fRow['FacultyID'];
+        if (isset($faculties[$facultyName])) {
+            $facultyID = $faculties[$facultyName];
         } else {
-            $stmtFac->close();
-            $failCount++; // Faculty not found
-            continue;
+            foreach ($faculties as $fname => $fid) {
+                if (stripos($fname, $facultyName) !== false || stripos($facultyName, $fname) !== false) {
+                    $facultyID = $fid;
+                    break;
+                }
+            }
         }
-        $stmtFac->close();
+        if ($facultyID === null) { $failCount++; continue; }
 
-        // Create User Identity
-        // Username = StudentCode
-        // Password = PasswordHash(StudentCode)
+        // Create User (Username = MSSV, Password = hash(MSSV))
         $passwordHash = password_hash($studentCode, PASSWORD_DEFAULT);
+        $stmtUser->bind_param('ssss', $studentCode, $fullName, $passwordHash, $email);
         
-        $stmtUser->bind_param('sss', $studentCode, $passwordHash, $email);
-        if (!$stmtUser->execute()) {
-            $failCount++;
-            continue; // Fail to create user
-        }
+        if (!$stmtUser->execute()) { $failCount++; continue; }
         $userID = $conn->insert_id;
 
-        // Create Student Record
+        // Create Student
         $stmtStudent->bind_param('isssisssss', $userID, $studentCode, $fullName, $gender, $facultyID, $className, $courseYear, $phone, $email, $address);
         
         if ($stmtStudent->execute()) {
             $successCount++;
         } else {
-            // Rollback User creation if Student creation fails?
-            // For bulk import, simple continue might be better, but orphan User is bad.
-            // Let's delete the user we just created.
+            // Rollback user creation
             $conn->query("DELETE FROM Users WHERE UserID = $userID");
             $failCount++;
         }
@@ -144,7 +119,7 @@ try {
     $conn->commit();
     
     // Clean up file
-    unlink($filePath);
+    @unlink($filePath);
 
 } catch (Exception $e) {
     $conn->rollback();
