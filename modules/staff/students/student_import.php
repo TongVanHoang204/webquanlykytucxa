@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 <li>Có thể có hàng tiêu đề và hỗ trợ thêm cột <strong>STT</strong> ở đầu file.</li>
                 <li>Preview và bước import dùng cùng một bộ rule, nên không còn tình trạng xem trước hợp lệ nhưng import thất bại vì lệch logic.</li>
                 <li>MSSV phải duy nhất, đồng thời không được trùng với username đã có trong bảng <code>Users</code>.</li>
-                <li>Email nếu nhập sẽ được kiểm tra định dạng, trùng email trong file và trùng email đã có trong hệ thống.</li>
+                <li>Email là bắt buộc và sẽ được kiểm tra định dạng, trùng email trong file và trùng email đã có trong hệ thống.</li>
                 <li>Tài khoản sinh viên mới sẽ dùng <strong>username = MSSV</strong> và <strong>mật khẩu mặc định = MSSV</strong>.</li>
             </ul>
         </div>

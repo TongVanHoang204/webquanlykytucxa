@@ -373,16 +373,16 @@ function studentImportAnalyzeRows(array $rows, array $context): array
             $errors[] = 'SĐT không hợp lệ';
         }
 
-        if ($rowData['Email'] !== '') {
-            if (!filter_var($rowData['Email'], FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Email không hợp lệ';
-            } else {
-                if (isset($seenEmails[$emailKey])) {
-                    $errors[] = 'Trùng email trong file';
-                }
-                if (isset($context['existing_emails'][$emailKey])) {
-                    $errors[] = 'Email đã tồn tại trong Users';
-                }
+        if ($rowData['Email'] === '') {
+            $errors[] = 'Thiếu Email';
+        } elseif (!filter_var($rowData['Email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Email không hợp lệ';
+        } else {
+            if (isset($seenEmails[$emailKey])) {
+                $errors[] = 'Trùng email trong file';
+            }
+            if (isset($context['existing_emails'][$emailKey])) {
+                $errors[] = 'Email đã tồn tại trong Users';
             }
         }
 
