@@ -6,6 +6,11 @@ requireRole(['Admin', 'Manager']);
 
 $conn->set_charset('utf8mb4');
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 /* ====== FILTER & PHÂN TRANG ====== */
 $statusFilter = $_GET['status'] ?? 'all';
 $search       = trim($_GET['q'] ?? '');
@@ -161,6 +166,7 @@ if (isset($_SESSION['message'])) {
     <link rel="stylesheet" href="../../../assets/css/staff/room_requests/staff_request_list.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <style>
         /* Đảm bảo SweetAlert2 hiển thị trên cùng */
         .swal2-container {
@@ -290,14 +296,13 @@ if (isset($_SESSION['message'])) {
                                         <?php if ($r['Status'] === 'Chờ duyệt'): ?>
                                             <!-- Nút duyệt -->
                                             <button type="button" class="btn approve swal-approve"
-                                                data-url="staff_request_approve.php?id=<?= (int)$r['RequestID'] ?>"
                                                 data-id="<?= (int)$r['RequestID'] ?>">
                                                 <i class="fa-solid fa-check"></i> Duyệt
                                             </button>
 
                                             <!-- Nút từ chối -->
                                             <button type="button" class="btn reject swal-reject"
-                                                data-url="request_reject.php?id=<?= (int)$r['RequestID'] ?>"
+                                                data-id="<?= (int)$r['RequestID'] ?>"
                                                 data-name="<?= htmlspecialchars($r['FullName']) ?>">
                                                 <i class="fa-solid fa-xmark"></i> Từ chối
                                             </button>
@@ -331,6 +336,30 @@ if (isset($_SESSION['message'])) {
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        function submitSecurePost(url, payload = {}) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+
+            Object.entries(payload).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_csrf';
+            csrfInput.value = CSRF_TOKEN;
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
         // ================== TOAST THÔNG BÁO ĐƠN GIẢN (KHÔNG DÙNG classList) ==================
         function showToast(message, type = 'info', duration = 3000) {
             let container = document.querySelector('.toast-container');
@@ -459,10 +488,8 @@ if (isset($_SESSION['message'])) {
                     e.stopPropagation();
                     e.stopImmediatePropagation();
 
-                    const url = this.getAttribute('data-url');
                     const requestId = this.getAttribute('data-id');
                     console.log(`▶️ DEBUG [${index}]: Click DUYỆT`);
-                    console.log('  - URL:', url);
                     console.log('  - RequestID:', requestId);
                     console.log('  - Button element:', btn);
                     console.log('  - Swal object:', typeof Swal, Swal);
@@ -499,9 +526,8 @@ if (isset($_SESSION['message'])) {
                             console.log('  - isDenied:', result.isDenied);
 
                             if (result.isConfirmed) {
-                                console.log('➡️ DEBUG: Chuyển hướng đến:', url);
                                 setTimeout(() => {
-                                    window.location.href = url;
+                                    submitSecurePost('staff_request_approve.php', { id: requestId });
                                 }, 100);
                             } else {
                                 console.log('❌ DEBUG: Người dùng hủy thao tác');
@@ -525,10 +551,9 @@ if (isset($_SESSION['message'])) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const url = this.getAttribute('data-url');
                     const name = this.getAttribute('data-name') || '';
+                    const requestId = this.getAttribute('data-id');
                     console.log(`▶️ DEBUG [${index}]: Click TỪ CHỐI`);
-                    console.log('  - URL:', url);
                     console.log('  - Student Name:', name);
                     console.log('  - Button element:', btn);
 
@@ -543,8 +568,7 @@ if (isset($_SESSION['message'])) {
                     }).then(result => {
                         console.log('✔️ DEBUG Swal reject result:', result);
                         if (result.isConfirmed) {
-                            console.log('➡️ DEBUG: Chuyển hướng đến:', url);
-                            window.location.href = url;
+                            submitSecurePost('request_reject.php', { id: requestId || '' });
                         } else {
                             console.log('❌ DEBUG: Người dùng hủy thao tác');
                         }

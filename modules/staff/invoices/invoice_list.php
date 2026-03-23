@@ -5,6 +5,11 @@ include '../../../includes/admin_header.php';
 include '../../../includes/auth_check.php';
 requireRole(['Admin']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 // ==================== 🧠 1️⃣ TỰ ĐỘNG TẠO & CẬP NHẬT HÓA ĐƠN ====================
 
 // Hàm kiểm tra cột tồn tại
@@ -225,6 +230,7 @@ function getDaysOverdue($dueDate)
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Hóa đơn | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
@@ -413,6 +419,8 @@ function getDaysOverdue($dueDate)
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         // 🗑️ Xóa hóa đơn
         function deleteInvoice(id, name) {
             Swal.fire({
@@ -435,12 +443,15 @@ function getDaysOverdue($dueDate)
                     fetch('invoice_delete_api.php', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
-                            body: new URLSearchParams({
-                                id
-                            })
+                        body: new URLSearchParams({
+                            id,
+                            _csrf: CSRF_TOKEN
                         })
+                    })
                         .then(r => r.json())
                         .then(data => {
                             if (data.status === 'success') {

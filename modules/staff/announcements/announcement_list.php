@@ -6,6 +6,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 
 // Bật chế độ báo lỗi MySQLi rõ ràng (hữu ích khi dev)
 mysqli_report(MYSQLI_REPORT_OFF); // tránh throw Exception nếu bạn chưa try/catch
@@ -60,6 +65,7 @@ $weekAnnouncements  = scalarCount($conn, "SELECT COUNT(*) AS total FROM Announce
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <title>Danh sách thông báo | Hệ thống Ký túc xá</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -291,6 +297,8 @@ $weekAnnouncements  = scalarCount($conn, "SELECT COUNT(*) AS total FROM Announce
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         // Biến toàn cục
         let currentPage = 1;
         const itemsPerPage = 8;
@@ -333,10 +341,13 @@ $weekAnnouncements  = scalarCount($conn, "SELECT COUNT(*) AS total FROM Announce
                 fetch('announcement_delete_api.php', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: new URLSearchParams({
-                            id
+                            id,
+                            _csrf: CSRF_TOKEN
                         })
                     })
                     .then(r => r.json())

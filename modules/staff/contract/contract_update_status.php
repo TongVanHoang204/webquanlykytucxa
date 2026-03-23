@@ -1,7 +1,12 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-include '../../../db_connect.php';
+require_once '../../../db_connect.php';
+require_once '../../../includes/auth_check.php';
 header('Content-Type: application/json; charset=utf-8');
+
+requireRole(['Admin', 'Manager']);
+requirePost();
+requireCsrf();
 
 $id = intval($_POST['id'] ?? 0);
 $action = $_POST['action'] ?? '';
@@ -25,7 +30,9 @@ switch ($action) {
         break;
 
     case 'cancel':
-        $conn->query("UPDATE Contracts SET Status = 'Đã hủy', UpdatedAt = NOW() WHERE ContractID = $id");
+        $stmt = $conn->prepare("UPDATE Contracts SET Status = 'Đã hủy', UpdatedAt = NOW() WHERE ContractID = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
         echo json_encode(['status' => 'success', 'message' => 'Hợp đồng đã được hủy.']);
         break;
 

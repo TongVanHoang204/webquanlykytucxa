@@ -6,6 +6,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole([ 'Admin']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 /* ================== BỘ LỌC ================== */
 $building = $_GET['building'] ?? 'all';
 $status   = $_GET['status']   ?? 'all';   // Trống / Đầy / Bảo trì / all
@@ -85,6 +90,7 @@ $stats = $statsRes ? $statsRes->fetch_assoc() : ['total' => 0, 'available' => 0,
     <link rel="stylesheet" href="../../../assets/css/staff/room/staff_rooms.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
 </head>
 
 <body>
@@ -221,7 +227,7 @@ $stats = $statsRes ? $statsRes->fetch_assoc() : ['total' => 0, 'available' => 0,
                                     <a href="room_view.php?id=<?= (int)$room['RoomID'] ?>" class="btn-view" title="Xem chi tiết"><i class="fas fa-eye"></i></a>
                                     <a href="room_edit.php?id=<?= (int)$room['RoomID'] ?>" class="btn-edit" title="Chỉnh sửa"><i class="fas fa-edit"></i></a>
                                     <?php if ($_SESSION['Role'] === 'Admin'): ?>
-                                    <a href="room_delete.php?id=<?= (int)$room['RoomID'] ?>" class="btn-delete" title="Xóa phòng" onclick="return confirmDelete('<?= htmlspecialchars($room['RoomNumber'], ENT_QUOTES) ?>', this)">
+                                    <a href="#" class="btn-delete" data-id="<?= (int)$room['RoomID'] ?>" title="Xóa phòng" onclick="return confirmDelete(event, '<?= htmlspecialchars($room['RoomNumber'], ENT_QUOTES) ?>', this)">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                     <?php endif; ?>
@@ -241,9 +247,10 @@ $stats = $statsRes ? $statsRes->fetch_assoc() : ['total' => 0, 'available' => 0,
     <?php include '../../../includes/footer.php'; ?>
 
     <script>
-        function confirmDelete(roomNumber, element) {
+        function confirmDelete(event, roomNumber, element) {
             event.preventDefault();
-            const deleteUrl = element.getAttribute('href');
+            const roomId = element.getAttribute('data-id');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             Swal.fire({
                 title: 'Xác nhận xóa',
                 html: `Bạn có chắc chắn muốn xóa phòng <b>"${roomNumber}"</b>?<br><small>Hành động này không thể hoàn tác</small>`,
@@ -255,7 +262,24 @@ $stats = $statsRes ? $statsRes->fetch_assoc() : ['total' => 0, 'available' => 0,
                 cancelButtonColor: '#6c757d'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = deleteUrl;
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'room_delete.php';
+
+                    const idInput = document.createElement('input');
+                    idInput.type = 'hidden';
+                    idInput.name = 'id';
+                    idInput.value = roomId || '';
+                    form.appendChild(idInput);
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_csrf';
+                    csrfInput.value = csrfToken;
+                    form.appendChild(csrfInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
                 }
             });
             return false;

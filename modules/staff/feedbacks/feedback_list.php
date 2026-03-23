@@ -6,6 +6,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 $conn->set_charset('utf8mb4');
 
 /* ========== FILTERS ========== */
@@ -117,6 +122,7 @@ function getCardClass($status) {
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= h($csrf) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Phản ánh Sinh viên | Hệ thống Ký túc xá</title>
     <link rel="stylesheet"
@@ -224,7 +230,8 @@ function getCardClass($status) {
                             </a>
                         <?php endif; ?>
 
-                        <a href="feedback_delete.php?id=<?= (int)$fb['FeedbackID'] ?>"
+                        <a href="#"
+                           data-id="<?= (int)$fb['FeedbackID'] ?>"
                            class="btn btn-delete"
                            onclick="return confirmDelete(event)">
                             <i class="fas fa-trash-alt"></i> Xóa phản ánh
@@ -249,6 +256,8 @@ function getCardClass($status) {
 </div>
 
 <script>
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
 function openImageModal(src) {
     document.getElementById('modalImg').src = src;
     document.getElementById('imgModal').style.display = 'flex';
@@ -261,8 +270,7 @@ function closeImageModal() {
 function confirmDelete(e) {
     e.preventDefault();
     const card = e.currentTarget.closest('.feedback-card');
-    const url = e.currentTarget.href;
-    const id = new URL(url, window.location.href).searchParams.get('id');
+    const id = e.currentTarget.getAttribute('data-id');
 
     Swal.fire({
         title: 'Xác nhận xóa?',
@@ -278,8 +286,12 @@ function confirmDelete(e) {
 
         fetch('feedback_delete_api.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({id: id})
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({id: id, _csrf: CSRF_TOKEN})
         })
         .then(r => r.json())
         .then(data => {

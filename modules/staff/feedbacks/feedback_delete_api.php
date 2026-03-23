@@ -1,17 +1,15 @@
 <?php
-session_start();
-include '../../../db_connect.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+require_once '../../../db_connect.php';
+require_once '../../../includes/auth_check.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// ✅ Kiểm tra quyền (nếu cần)
-if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Manager'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Bạn không có quyền xóa phản ánh!']);
-    exit;
-}
+requireRole(['Admin', 'Manager']);
+requirePost();
+requireCsrf();
 
-// ✅ Kiểm tra dữ liệu gửi lên
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['id'])) {
+if (empty($_POST['id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ!']);
     exit;
 }

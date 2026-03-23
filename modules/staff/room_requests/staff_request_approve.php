@@ -3,9 +3,11 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin']);
+requirePost();
+requireCsrf();
 
 // Debug logging
-error_log("DEBUG approve: Start processing RequestID=" . ($_GET['id'] ?? 'NULL'));
+error_log("DEBUG approve: Start processing RequestID=" . ($_POST['id'] ?? 'NULL'));
 
 $conn->set_charset('utf8mb4');
 
@@ -13,7 +15,7 @@ $currentUserId = (int)($_SESSION['UserID'] ?? 0);
 error_log("DEBUG approve: Current UserID=" . $currentUserId);
 
 // Lấy id request từ query string
-$requestId = (int)($_GET['id'] ?? 0);
+$requestId = (int)($_POST['id'] ?? 0);
 if ($requestId <= 0) {
     error_log("DEBUG approve: Invalid RequestID=" . $requestId);
     $_SESSION['message'] = 'Yêu cầu không hợp lệ.';
@@ -246,7 +248,7 @@ try {
         $_SESSION['UserID'] ?? null,
         'Create contract',
         'Contracts',
-        "Tạo hợp đồng cho StudentID={$studentID}, RoomID={$roomID}",
+        "Tạo hợp đồng cho StudentID={$studentId}, RoomID={$roomId}",
         'activity'
     );
 } catch (Exception $ex) {

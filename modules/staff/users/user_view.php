@@ -246,10 +246,12 @@ if (count($parts) >= 2) {
             }).then(res => {
                 if (!res.isConfirmed) return;
                 fetch('user_delete_api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                         body: new URLSearchParams({
                             id,
                             _csrf: token

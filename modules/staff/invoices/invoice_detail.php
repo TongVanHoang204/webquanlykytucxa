@@ -5,6 +5,11 @@ include '../../../includes/admin_header.php';
 include '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 $id = $_GET['id'] ?? 0;
 if (!$id) {
     echo "<script>alert('Thiếu ID hóa đơn!'); window.location='invoice_list.php';</script>";
@@ -91,6 +96,7 @@ function getStatusIcon($status)
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiết hóa đơn #<?= $invoice['InvoiceID'] ?> | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
@@ -256,6 +262,8 @@ function getStatusIcon($status)
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         function confirmPayment(id, name) {
             const btn = document.getElementById('confirmBtn');
             const originalHTML = btn.innerHTML;
@@ -281,10 +289,13 @@ function getStatusIcon($status)
                     return fetch('invoice_update_status.php', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: new URLSearchParams({
-                                id
+                                id,
+                                _csrf: CSRF_TOKEN
                             })
                         })
                         .then(async response => {

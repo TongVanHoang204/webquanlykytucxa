@@ -5,6 +5,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 $conn->set_charset('utf8mb4');
 
 /* ============== 0) ĐỒNG BỘ IsInDorm (OPTIONAL) ============== */
@@ -185,6 +190,7 @@ function avatarUrl(?string $path, ?string $gender): string
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <title>Quản lý Sinh viên | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/students/staff_student_list.css">
@@ -418,6 +424,8 @@ function avatarUrl(?string $path, ?string $gender): string
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         // Check for import message
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('msg') && urlParams.get('msg') === 'Imported') {
@@ -465,10 +473,13 @@ function avatarUrl(?string $path, ?string $gender): string
                 fetch('student_delete_api.php', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: new URLSearchParams({
-                            id
+                            id,
+                            _csrf: CSRF_TOKEN
                         })
                     })
                     .then(r => r.json())

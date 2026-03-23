@@ -5,6 +5,11 @@ require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 $conn->set_charset('utf8mb4');
 
 $requestId = (int)($_GET['id'] ?? 0);
@@ -121,6 +126,7 @@ function statusBadgeClass($status) {
     <link rel="stylesheet" href="../../../assets/css/staff/room_requests/staff_request_detail.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
 </head>
 <body>
 <div class="page-wrapper">
@@ -278,12 +284,14 @@ function statusBadgeClass($status) {
 
         <div class="right-actions">
             <?php if ($request['Status'] === 'Chờ duyệt'): ?>
-                <a href="staff_request_approve_form.php?id=<?= (int)$request['RequestID'] ?>"
+                <a href="#"
+                   data-id="<?= (int)$request['RequestID'] ?>"
                    class="btn approve" id="btnApprove">
                     <i class="fa-solid fa-check"></i> Duyệt yêu cầu
                 </a>
 
-                <a href="request_reject.php?id=<?= (int)$request['RequestID'] ?>"
+                <a href="#"
+                   data-id="<?= (int)$request['RequestID'] ?>"
                    class="btn reject" id="btnReject">
                     <i class="fa-solid fa-xmark"></i> Từ chối
                 </a>
@@ -298,6 +306,31 @@ function statusBadgeClass($status) {
 </div>
 
 <script>
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+function submitSecurePost(url, payload = {}) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+
+    Object.entries(payload).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    });
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_csrf';
+    csrfInput.value = CSRF_TOKEN;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const approveBtn = document.getElementById('btnApprove');
@@ -306,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (approveBtn) {
             approveBtn.addEventListener('click', function (e) {
                 e.preventDefault();
-                const url = this.getAttribute('href');
+                const requestId = this.getAttribute('data-id');
 
                 Swal.fire({
                     title: 'Duyệt yêu cầu này?',
@@ -319,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelButtonColor: '#d33'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.href = url;
+                        submitSecurePost('staff_request_approve.php', { id: requestId || '' });
                     }
                 });
             });
@@ -328,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rejectBtn) {
             rejectBtn.addEventListener('click', function (e) {
                 e.preventDefault();
-                const url = this.getAttribute('href');
+                const requestId = this.getAttribute('data-id');
 
                 Swal.fire({
                     title: 'Từ chối yêu cầu?',
@@ -341,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelButtonColor: '#7f8c8d'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.href = url;
+                        submitSecurePost('request_reject.php', { id: requestId || '' });
                     }
                 });
             });

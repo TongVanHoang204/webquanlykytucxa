@@ -5,6 +5,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 /* ===================== Helper ===================== */
 function e($s)
 {
@@ -139,6 +144,7 @@ if ($cstmt) {
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= e($csrf) ?>">
     <title>Chi tiết sinh viên | Hệ thống KTX</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/students/staff_student_detail.css">
@@ -309,6 +315,8 @@ if ($cstmt) {
 </div>
 
 <script>
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
 function deleteStudent(id, name) {
     Swal.fire({
         title: 'Xác nhận xóa',
@@ -324,8 +332,12 @@ function deleteStudent(id, name) {
         if (!res.isConfirmed) return;
         fetch('student_delete_api.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ id })
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({ id, _csrf: CSRF_TOKEN })
         })
         .then(r => r.json())
         .then(data => {

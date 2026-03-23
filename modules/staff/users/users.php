@@ -7,6 +7,15 @@ include '../../../includes/auth_check.php';
 
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
+if (isset($_GET['delete'])) {
+    sendRequestError('Chuc nang xoa nguoi dung chi chap nhan POST co CSRF token.', 405);
+}
+
 /* ===================== XÓA NGƯỜI DÙNG ===================== */
 if (isset($_GET['delete'])) {
     $userId = (int)$_GET['delete'];
@@ -206,6 +215,7 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="../../../assets/css/admin/admin_users.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
 </head>
 
 <body>
@@ -423,8 +433,9 @@ $result = $conn->query($sql);
                                             class="btn-edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="users.php?delete=<?= $row['UserID'] ?>"
+                                        <a href="#"
                                             class="btn-delete"
+                                            data-id="<?= (int)$row['UserID'] ?>"
                                             onclick="return confirmDelete(event, '<?= htmlspecialchars($row['FullName']) ?>', this)">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
@@ -495,7 +506,8 @@ $result = $conn->query($sql);
         // SweetAlert confirm delete
         function confirmDelete(event, userName, element) {
             event.preventDefault();
-            const deleteUrl = element.getAttribute('href');
+            const userId = element.getAttribute('data-id');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
             Swal.fire({
                 title: 'Xác nhận xóa',
@@ -510,9 +522,48 @@ $result = $conn->query($sql);
                 backdrop: 'rgba(0,0,0,0.1)'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    element.closest('tr').style.opacity = '0.6';
-                    element.closest('tr').style.transition = 'all 0.3s ease';
-                    window.location.href = deleteUrl;
+                    const row = element.closest('tr');
+                    if (row) {
+                        row.style.opacity = '0.6';
+                        row.style.transition = 'all 0.3s ease';
+                    }
+
+                    fetch('user_delete_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({
+                            id: userId,
+                            _csrf: csrfToken
+                        })
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Đã xóa',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                                setTimeout(() => window.location.reload(), 700);
+                            } else {
+                                Swal.fire('Lỗi!', data.message || 'Không thể xóa người dùng', 'error');
+                                if (row) {
+                                    row.style.opacity = '1';
+                                }
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire('Lỗi!', 'Không thể kết nối đến máy chủ', 'error');
+                            if (row) {
+                                row.style.opacity = '1';
+                            }
+                        });
                 }
             });
 
