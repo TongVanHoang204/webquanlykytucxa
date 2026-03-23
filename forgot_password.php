@@ -88,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $userId !== null && empty($error)) 
     <title>Đặt lại mật khẩu</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="assets/css/login.css" />
+    <link rel="stylesheet" href="assets/css/auth_shell.css" />
     <script src="https://kit.fontawesome.com/a2e0e6d10f.js" crossorigin="anonymous"></script>
 </head>
 

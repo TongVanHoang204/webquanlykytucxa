@@ -8,6 +8,9 @@ require_once __DIR__ . "/error_handler.php";
 $userName = $_SESSION['FullName'] ?? 'Quản trị viên';
 $userAvatar = $_SESSION['Avatar'] ?? null;
 $userRole = $_SESSION['Role'] ?? 'Staff';
+$pageTitle = $pageTitle ?? 'Trang quản trị - Ký túc xá';
+$pageBodyClass = trim('app-shell app-shell--admin ' . ($pageBodyClass ?? 'theme-auto'));
+$pageStylesheets = $pageStylesheets ?? [];
 
 /* Configure Base Path */
 $base = '/';
@@ -50,7 +53,7 @@ if ($userAvatar && !empty($userAvatar)) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trang quản trị - Ký túc xá</title>
+    <title><?= htmlspecialchars($pageTitle) ?></title>
 
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -61,6 +64,10 @@ if ($userAvatar && !empty($userAvatar)) {
     <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css" />
     <!-- Admin Chat AI CSS -->
     <link rel="stylesheet" href="<?= $base ?>assets/css/admin/chat_ai_widget.css" />
+    <link rel="stylesheet" href="<?= $base ?>assets/css/app_shell.css" />
+    <?php foreach ($pageStylesheets as $stylesheet): ?>
+        <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>" />
+    <?php endforeach; ?>
 
     <!-- Scripts -->
     <script src="<?= $base ?>assets/js/admin_header.js" defer></script>
@@ -69,7 +76,7 @@ if ($userAvatar && !empty($userAvatar)) {
     <?php endif; ?>
 </head>
 
-<body class="theme-auto" data-base="<?= $base ?>">
+<body class="<?= htmlspecialchars($pageBodyClass) ?>" data-base="<?= $base ?>">
 
     <!-- Mobile Drawer (Sidebar) -->
     <aside class="drawer">
@@ -238,4 +245,4 @@ if ($userAvatar && !empty($userAvatar)) {
 
     
     <!-- Main Content Wrapper (Optional, to be closed by footer or page) -->
-    <main style="min-height: 80vh;">
+    <main class="app-main app-main--admin">
