@@ -2,766 +2,696 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 include 'db_connect.php';
 
-// --- Lấy thông tin người dùng hiện tại ---
+/*
+Visual thesis: a calm editorial homepage built from real dorm photography, warm wood tones,
+and deep navy surfaces so the KTX feels credible, modern, and livable.
+Content plan: hero, live room availability, daily-living detail with announcements, final CTA.
+Interaction thesis:
+- Stagger the hero copy for immediate presence.
+- Add a restrained scroll-linked shift to the hero visual plane.
+- Reveal sections and room rows progressively to keep the page feeling curated.
+*/
+
+function homepage_announcement_meta(string $title): array
+{
+    $normalized = mb_strtolower($title, 'UTF-8');
+
+    if (str_contains($normalized, 'khẩn cấp') || str_contains($normalized, 'cảnh báo')) {
+        return ['label' => 'Khẩn cấp', 'icon' => 'fa-triangle-exclamation'];
+    }
+
+    if (str_contains($normalized, 'sự kiện') || str_contains($normalized, 'hoạt động')) {
+        return ['label' => 'Sự kiện', 'icon' => 'fa-calendar-days'];
+    }
+
+    if (str_contains($normalized, 'bảo trì') || str_contains($normalized, 'sửa chữa') || str_contains($normalized, 'cúp điện')) {
+        return ['label' => 'Bảo trì', 'icon' => 'fa-screwdriver-wrench'];
+    }
+
+    return ['label' => 'Cập nhật', 'icon' => 'fa-bullhorn'];
+}
+
 $userId = $_SESSION['UserID'] ?? null;
-$hasRoom = false;
-$info = null;
+$sessionRole = $_SESSION['Role'] ?? 'Guest';
+$studentOverview = null;
+$userHasRoom = false;
 
 if ($userId) {
-    $stmt = $conn->prepare("
-        SELECT s.StudentID, s.FullName, s.StudentCode, 
-               b.BuildingName, r.RoomNumber, r.RoomType, 
+    $studentStmt = $conn->prepare("
+        SELECT s.StudentID, s.FullName, s.StudentCode,
+               b.BuildingName, r.RoomNumber, r.RoomType,
                c.StartDate, c.EndDate
         FROM Users u
-        JOIN Students s ON s.UserID = u.UserID
+        LEFT JOIN Students s ON s.UserID = u.UserID
         LEFT JOIN Contracts c ON c.StudentID = s.StudentID AND c.Status = 'Hiệu lực'
         LEFT JOIN Rooms r ON r.RoomID = c.RoomID
         LEFT JOIN Buildings b ON b.BuildingID = r.BuildingID
         WHERE u.UserID = ?
         LIMIT 1
     ");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $info = $result->fetch_assoc();
-    $stmt->close();
 
-    $hasRoom = !empty($info['RoomNumber']);
+    $studentStmt->bind_param("i", $userId);
+    $studentStmt->execute();
+    $studentResult = $studentStmt->get_result();
+    $studentOverview = $studentResult ? $studentResult->fetch_assoc() : null;
+    $studentStmt->close();
+
+    $userHasRoom = !empty($studentOverview['RoomNumber']);
 }
 
-// --- Xử lý tìm kiếm phòng ---
-$searchBuilding = $_GET['building'] ?? '';
-$searchRoomType = $_GET['room_type'] ?? '';
-$searchMaxPrice = $_GET['max_price'] ?? '';
+$searchBuilding = trim((string)($_GET['building'] ?? ''));
+$searchRoomType = trim((string)($_GET['room_type'] ?? ''));
+$searchMaxPrice = trim((string)($_GET['max_price'] ?? ''));
 
-// Lấy danh sách tòa nhà cho dropdown
-$buildingsQuery = $conn->query("SELECT BuildingID, BuildingName FROM Buildings ORDER BY BuildingName ASC");
 $buildings = [];
-while ($b = $buildingsQuery->fetch_assoc()) {
-    $buildings[] = $b;
+$buildingsQuery = $conn->query("SELECT BuildingID, BuildingName FROM Buildings ORDER BY BuildingName ASC");
+if ($buildingsQuery) {
+    while ($building = $buildingsQuery->fetch_assoc()) {
+        $buildings[] = $building;
+    }
 }
+
+$siteStats = [
+    'OpenRooms' => 0,
+    'TotalBuildings' => 0,
+    'ActiveResidents' => 0,
+];
+
+$statsQuery = $conn->query("
+    SELECT
+        (SELECT COUNT(*) FROM Rooms WHERE Status = 'Trống') AS OpenRooms,
+        (SELECT COUNT(*) FROM Buildings) AS TotalBuildings,
+        (SELECT COUNT(*) FROM Contracts WHERE Status = 'Hiệu lực') AS ActiveResidents
+");
+
+if ($statsQuery && ($statsRow = $statsQuery->fetch_assoc())) {
+    $siteStats = array_merge($siteStats, $statsRow);
+}
+
+$roomLimit = $userId ? 5 : 4;
+$whereClauses = ["r.Status = 'Trống'"];
+$roomParams = [];
+$roomTypes = '';
+
+if ($searchBuilding !== '') {
+    $whereClauses[] = "b.BuildingID = ?";
+    $roomParams[] = (int)$searchBuilding;
+    $roomTypes .= 'i';
+}
+
+if ($searchRoomType !== '') {
+    $whereClauses[] = "r.RoomType = ?";
+    $roomParams[] = $searchRoomType;
+    $roomTypes .= 's';
+}
+
+if ($searchMaxPrice !== '' && is_numeric($searchMaxPrice) && (float)$searchMaxPrice > 0) {
+    $whereClauses[] = "r.RoomPrice <= ?";
+    $roomParams[] = (float)$searchMaxPrice;
+    $roomTypes .= 'd';
+}
+
+$whereSql = implode(' AND ', $whereClauses);
+$roomSql = "
+    SELECT
+        r.RoomID,
+        r.RoomNumber,
+        r.RoomType,
+        r.RoomPrice,
+        r.Capacity,
+        r.ImagePath,
+        b.BuildingName,
+        (
+            SELECT COUNT(*)
+            FROM Contracts c
+            WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực'
+        ) AS CurrentOccupants,
+        (
+            r.Capacity -
+            (
+                SELECT COUNT(*)
+                FROM Contracts c
+                WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực'
+            )
+        ) AS AvailableSlots
+    FROM Rooms r
+    JOIN Buildings b ON b.BuildingID = r.BuildingID
+    WHERE {$whereSql}
+    ORDER BY r.RoomPrice ASC, r.RoomNumber ASC
+    LIMIT " . (int)$roomLimit;
+
+$featuredRooms = [];
+$roomResult = null;
+
+if ($roomParams !== []) {
+    $roomStmt = $conn->prepare($roomSql);
+    $roomStmt->bind_param($roomTypes, ...$roomParams);
+    $roomStmt->execute();
+    $roomResult = $roomStmt->get_result();
+} else {
+    $roomResult = $conn->query($roomSql);
+}
+
+if ($roomResult instanceof mysqli_result) {
+    while ($room = $roomResult->fetch_assoc()) {
+        $featuredRooms[] = $room;
+    }
+}
+
+if (isset($roomStmt) && $roomStmt instanceof mysqli_stmt) {
+    $roomStmt->close();
+}
+
+$announcements = [];
+$announcementsQuery = $conn->query("
+    SELECT AnnouncementID, Title, Content, DatePosted, PostedBy
+    FROM Announcements
+    WHERE DatePosted <= NOW()
+    ORDER BY DatePosted DESC
+    LIMIT 3
+");
+
+if ($announcementsQuery) {
+    while ($announcement = $announcementsQuery->fetch_assoc()) {
+        $announcements[] = $announcement;
+    }
+}
+
+$livingPoints = [
+    [
+        'icon' => 'fa-bed',
+        'title' => 'Xem phòng bằng dữ liệu thật',
+        'copy' => 'Ảnh phòng, số chỗ còn và mức giá được cập nhật trực tiếp ngay trên trang chủ.',
+    ],
+    [
+        'icon' => 'fa-file-invoice-dollar',
+        'title' => 'Theo dõi hợp đồng và chi phí',
+        'copy' => 'Thời hạn hợp đồng, hóa đơn điện nước và các khoản phải trả nằm trong cùng một luồng.',
+    ],
+    [
+        'icon' => 'fa-comments',
+        'title' => 'Nhận thông báo và gửi phản ánh',
+        'copy' => 'Ban quản lý, bảng tin và hỗ trợ sinh viên được gom về một bề mặt nhất quán.',
+    ],
+];
+
+$faqItems = [
+    [
+        'question' => 'Làm sao để đăng ký phòng ở KTX?',
+        'answer' => 'Đăng nhập, chọn phòng phù hợp, gửi yêu cầu và chờ ban quản lý xác nhận theo lịch xét duyệt.',
+    ],
+    [
+        'question' => 'Chi phí hàng tháng gồm những gì?',
+        'answer' => 'Tiền phòng là cố định, điện nước được cộng theo mức sử dụng thực tế trên hóa đơn của bạn.',
+    ],
+    [
+        'question' => 'Cần hỗ trợ gấp thì liên hệ ở đâu?',
+        'answer' => 'Bạn có thể gọi hotline, gửi phản ánh trong hệ thống hoặc đến văn phòng quản lý tại tòa A.',
+    ],
+];
+
+$pageMode = 'guest';
+if ($userId && in_array($sessionRole, ['Admin', 'Manager'], true)) {
+    $pageMode = 'staff';
+} elseif ($userId && $userHasRoom) {
+    $pageMode = 'resident';
+} elseif ($userId) {
+    $pageMode = 'applicant';
+}
+
+$displayName = $studentOverview['FullName'] ?? ($_SESSION['FullName'] ?? 'Bạn');
+$contractWindow = 'Chưa có hợp đồng hiệu lực';
+if (!empty($studentOverview['StartDate']) && !empty($studentOverview['EndDate'])) {
+    $contractWindow = date('d/m/Y', strtotime($studentOverview['StartDate'])) . ' - ' . date('d/m/Y', strtotime($studentOverview['EndDate']));
+}
+
+$heroEyebrow = 'Hệ thống nội trú cho sinh viên';
+$heroTitle = 'Đăng ký phòng bằng hình ảnh thật, giá rõ ràng và cập nhật trực tiếp từ ban quản lý.';
+$heroBody = 'Trang chủ được tổ chức như một mặt bằng tuyển chọn: xem phòng còn chỗ, đọc thông báo mới và bắt đầu thủ tục nội trú mà không cần đi qua nhiều màn hình.';
+$heroPrimaryHref = 'login.php';
+$heroPrimaryLabel = 'Đăng nhập để bắt đầu';
+$heroSecondaryHref = '#room-availability';
+$heroSecondaryLabel = 'Xem phòng đang mở';
+$heroHighlights = [
+    ['label' => 'Phòng đang mở', 'value' => number_format((int)$siteStats['OpenRooms'])],
+    ['label' => 'Tòa nhà', 'value' => number_format((int)$siteStats['TotalBuildings'])],
+    ['label' => 'Đang nội trú', 'value' => number_format((int)$siteStats['ActiveResidents'])],
+];
+$roomSectionTitle = 'Phòng còn chỗ trong hệ thống';
+$roomSectionBody = 'Lọc nhanh theo tòa nhà, loại phòng và mức giá để xem những lựa chọn đang còn suất.';
+$ctaTitle = 'Sẵn sàng chọn chỗ ở cho học kỳ tới?';
+$ctaBody = 'Đăng nhập để nộp yêu cầu, theo dõi duyệt phòng và nhận thông báo từ ban quản lý trong cùng một luồng.';
+$ctaPrimaryHref = 'login.php';
+$ctaPrimaryLabel = 'Đăng nhập';
+$ctaSecondaryHref = '#living-flow';
+$ctaSecondaryLabel = 'Xem quy trình';
+
+if ($pageMode === 'resident') {
+    $heroEyebrow = 'Xin chào, ' . $displayName;
+    $heroTitle = 'Phòng ở, hợp đồng và cập nhật nội trú của bạn đang được theo dõi trên cùng một bề mặt.';
+    $heroBody = 'Trang chủ chuyển từ giới thiệu sang vận hành: bạn có thể xem tình trạng hợp đồng hiện tại, tham khảo phòng còn chỗ và theo dõi các thông báo mới nhất.';
+    $heroPrimaryHref = 'modules/user/rooms/rooms.php';
+    $heroPrimaryLabel = 'Xem phòng đang ở';
+    $heroSecondaryHref = 'modules/user/dashboard.php';
+    $heroSecondaryLabel = 'Đến trang sinh viên';
+    $heroHighlights = [
+        ['label' => 'Mã sinh viên', 'value' => $studentOverview['StudentCode'] ?: 'Chưa cập nhật'],
+        ['label' => 'Phòng hiện tại', 'value' => trim(($studentOverview['BuildingName'] ?? '') . ' - ' . ($studentOverview['RoomNumber'] ?? ''))],
+        ['label' => 'Hiệu lực', 'value' => $contractWindow],
+    ];
+    $roomSectionTitle = 'Tình trạng phòng còn chỗ';
+    $roomSectionBody = 'Bạn đã có hợp đồng hiệu lực, nhưng vẫn có thể theo dõi những phòng còn trống và cập nhật mới trong toàn khu.';
+    $ctaTitle = 'Cần theo dõi thêm thông tin nội trú?';
+    $ctaBody = 'Mọi cập nhật về bảng tin, phản ánh và hồ sơ sinh viên đều có sẵn ngay trong hệ thống.';
+    $ctaPrimaryHref = 'modules/user/notifications.php';
+    $ctaPrimaryLabel = 'Xem thông báo';
+    $ctaSecondaryHref = 'modules/user/UserProfile/profile.php';
+    $ctaSecondaryLabel = 'Mở hồ sơ';
+} elseif ($pageMode === 'applicant') {
+    $heroEyebrow = 'Xin chào, ' . $displayName;
+    $heroTitle = 'Phòng còn chỗ, mức giá và quy trình xét duyệt đang hiển thị ngay tại trang đầu.';
+    $heroBody = 'Bạn đang ở bước chọn chỗ ở. Dùng bộ lọc để so sánh các lựa chọn mở, sau đó gửi yêu cầu và theo dõi phản hồi từ ban quản lý.';
+    $heroPrimaryHref = 'modules/user/rooms/register_room.php';
+    $heroPrimaryLabel = 'Gửi yêu cầu nhận phòng';
+    $heroSecondaryHref = 'modules/user/dashboard.php';
+    $heroSecondaryLabel = 'Đến trang sinh viên';
+    $heroHighlights = [
+        ['label' => 'Phòng đang mở', 'value' => number_format((int)$siteStats['OpenRooms'])],
+        ['label' => 'Tòa nhà', 'value' => number_format((int)$siteStats['TotalBuildings'])],
+        ['label' => 'Duyệt hồ sơ', 'value' => '1 - 3 ngày'],
+    ];
+    $roomSectionTitle = 'Phòng còn chỗ để bạn gửi yêu cầu';
+    $roomSectionBody = 'So sánh nhanh theo tòa nhà, loại phòng và ngân sách trước khi nộp yêu cầu đăng ký.';
+    $ctaTitle = 'Muốn chốt phòng trong hôm nay?';
+    $ctaBody = 'Đi tiếp từ trang này để gửi yêu cầu, theo dõi kết quả duyệt và xem thông báo liên quan đến hồ sơ.';
+    $ctaPrimaryHref = 'modules/user/rooms/register_room.php';
+    $ctaPrimaryLabel = 'Đăng ký phòng';
+    $ctaSecondaryHref = 'modules/user/room_requests/request_list.php';
+    $ctaSecondaryLabel = 'Xem yêu cầu của tôi';
+} elseif ($pageMode === 'staff') {
+    $heroEyebrow = 'Không gian điều hành nội trú';
+    $heroTitle = 'Từ trang đầu, bạn có thể nắm nhanh tình trạng phòng, thông báo và luồng vận hành toàn khu.';
+    $heroBody = 'Homepage vẫn giữ vai trò giới thiệu công khai, nhưng với tài khoản quản lý nó đồng thời là điểm vào để rà soát tình trạng phòng và chuyển sang bảng điều hành.';
+    $heroPrimaryHref = 'modules/staff/dashboard.php';
+    $heroPrimaryLabel = 'Mở bảng quản trị';
+    $heroSecondaryHref = '#room-availability';
+    $heroSecondaryLabel = 'Xem tình trạng phòng';
+    $heroHighlights = [
+        ['label' => 'Vai trò', 'value' => $sessionRole],
+        ['label' => 'Phòng đang mở', 'value' => number_format((int)$siteStats['OpenRooms'])],
+        ['label' => 'Tòa nhà', 'value' => number_format((int)$siteStats['TotalBuildings'])],
+    ];
+    $roomSectionTitle = 'Tình trạng phòng còn chỗ';
+    $roomSectionBody = 'Dữ liệu công khai được giữ ở dạng dễ quét để quản trị viên cũng có thể kiểm tra nhanh ngay tại trang chủ.';
+    $ctaTitle = 'Tiếp tục vào bề mặt điều hành?';
+    $ctaBody = 'Bảng quản trị dành cho bạn vẫn là nơi xử lý nghiệp vụ, nhưng trang này giúp nắm nhanh tình hình trước khi chuyển tiếp.';
+    $ctaPrimaryHref = 'modules/staff/dashboard.php';
+    $ctaPrimaryLabel = 'Đến dashboard';
+    $ctaSecondaryHref = 'modules/user/accesslogs.php';
+    $ctaSecondaryLabel = 'Mở bảng tin';
+}
+
+$pageTitle = 'Ký túc xá Sinh viên | Phòng ở, thông báo và nội trú';
+$pageBodyClass = 'homepage';
+$pageStylesheets = ['assets/css/homepage.css'];
+
 include 'includes/header.php';
 ?>
 
-    <main>
+<main class="homepage-main">
+    <section class="hero-stage">
+        <div class="hero-stage__veil"></div>
+        <div class="hero-stage__grid">
+            <div class="hero-stage__copy">
+                <p class="hero-kicker"><?= htmlspecialchars($heroEyebrow) ?></p>
+                <p class="hero-brand">Ký túc xá Sinh viên</p>
+                <h1 class="hero-title"><?= htmlspecialchars($heroTitle) ?></h1>
+                <p class="hero-body"><?= htmlspecialchars($heroBody) ?></p>
 
-        <?php if (!$userId): ?>
-            <!-- ===========================================================
-         🔹 GIAO DIỆN KHÁCH — CHƯA ĐĂNG NHẬP
-    ============================================================ -->
-
-            <section class="hero rgb-hero">
-                <div class="hero-content">
-                    <h2 class="rgb-text">Chào mừng đến với Ký túc xá Sinh viên</h2>
-                    <p>Môi trường sống lý tưởng với đầy đủ tiện nghi, an ninh và cộng đồng sinh viên năng động</p>
-                    <div class="hero-buttons">
-                        <a href="login.php" class="btn btn-rgb">Đăng nhập ngay</a>
-                        <a href="#room-explorer" class="btn btn-rgb-outline">Tham khảo phòng ngay</a>
-                    </div>
+                <div class="hero-actions">
+                    <a href="<?= htmlspecialchars($heroPrimaryHref) ?>" class="hero-button hero-button--primary">
+                        <?= htmlspecialchars($heroPrimaryLabel) ?>
+                    </a>
+                    <a href="<?= htmlspecialchars($heroSecondaryHref) ?>" class="hero-button hero-button--secondary">
+                        <?= htmlspecialchars($heroSecondaryLabel) ?>
+                    </a>
                 </div>
-            </section>
-
-
-            <!-- ===========================================================
-         🔹 DANH SÁCH PHÒNG TRỐNG (KHÁCH)
-    ============================================================ -->
-            <section id="room-explorer" class="available-rooms">
-                <div class="section-title">
-                    <h2>🏠 Phòng Trống Hiện Có</h2>
-                    <p>Khám phá các phòng còn trống trong ký túc xá</p>
-                </div>
-
-                <!-- Form tìm kiếm phòng -->
-                <div class="search-form-container">
-                    <form method="GET" action="" class="room-search-form" id="roomFilterForm">
-                        <div class="search-filters">
-                            <div class="filter-item">
-                                <label for="building"><i class="fas fa-building"></i> Tòa nhà</label>
-                                <select name="building" id="building">
-                                    <option value=""> Tất cả tòa nhà </option>
-                                    <?php foreach ($buildings as $building): ?>
-                                        <option value="<?= $building['BuildingID'] ?>"
-                                            <?= $searchBuilding == $building['BuildingID'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($building['BuildingName']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="filter-item">
-                                <label for="room_type"><i class="fas fa-venus-mars"></i> Loại phòng</label>
-                                <select name="room_type" id="room_type">
-                                    <option value=""> Tất cả </option>
-                                    <option value="Nam" <?= $searchRoomType == 'Nam' ? 'selected' : '' ?>>♂️ Nam</option>
-                                    <option value="Nữ" <?= $searchRoomType == 'Nữ' ? 'selected' : '' ?>>♀️ Nữ</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-item">
-                                <label for="max_price_range">
-                                    <i class="fas fa-money-bill-wave"></i> Giá tối đa:
-                                    <span id="max_price_text">
-                                        <?= $searchMaxPrice ? number_format($searchMaxPrice) . ' đ' : 'Không giới hạn' ?>
-                                    </span>
-                                </label>
-
-                                <input type="range"
-                                    id="max_price_range"
-                                    name="max_price"
-                                    min="0" max="3000000" step="50000"
-                                    value="<?= $searchMaxPrice ?: 0 ?>">
-                            </div>
-
-                            <!-- Có thể giữ nút Đặt lại nếu thích -->
-                            <div class="filter-actions">
-                                <a href="index.php" class="btn btn-secondary">
-                                    <i class="fas fa-redo"></i> Đặt lại
-                                </a>
-                            </div>
-
-                            <!-- Submit ẩn cho trình duyệt cũ / enter -->
-                            <button type="submit" style="display:none"></button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="rooms-grid">
-                    <?php
-                    // Xây dựng câu query với điều kiện tìm kiếm
-                    $whereClauses = ["r.Status = 'Trống'"];
-                    $params = [];
-                    $types = "";
-
-                    if (!empty($searchBuilding)) {
-                        $whereClauses[] = "b.BuildingID = ?";
-                        $params[] = $searchBuilding;
-                        $types .= "i";
-                    }
-
-                    if (!empty($searchRoomType)) {
-                        $whereClauses[] = "r.RoomType = ?";
-                        $params[] = $searchRoomType;
-                        $types .= "s";
-                    }
-
-                    if (!empty($searchMaxPrice)) {
-                        $whereClauses[] = "r.RoomPrice <= ?";
-                        $params[] = $searchMaxPrice;
-                        $types .= "d";
-                    }
-
-                    $whereSQL = implode(" AND ", $whereClauses);
-
-                    $searchSQL = "
-                        SELECT r.*, b.BuildingName,
-                               (SELECT COUNT(*) FROM Contracts c WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực') AS CurrentOccupants,
-                               (r.Capacity - (SELECT COUNT(*) FROM Contracts c WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực')) AS AvailableSlots
-                        FROM Rooms r
-                        JOIN Buildings b ON b.BuildingID = r.BuildingID
-                        WHERE $whereSQL
-                        ORDER BY r.RoomPrice ASC
-                        LIMIT 20
-                    ";
-
-                    if (!empty($params)) {
-                        $stmt = $conn->prepare($searchSQL);
-                        $stmt->bind_param($types, ...$params);
-                        $stmt->execute();
-                        $availableRooms = $stmt->get_result();
-                    } else {
-                        $availableRooms = $conn->query($searchSQL);
-                    }
-
-                    if ($availableRooms->num_rows > 0):
-                        while ($room = $availableRooms->fetch_assoc()):
-                            $roomTypeIcon = $room['RoomType'] == 'Nam' ? '♂️' : ($room['RoomType'] == 'Nữ' ? '♀️' : '⚧');
-
-                            $roomImage = !empty($room['ImagePath'])
-                                ? $room['ImagePath']
-                                : 'assets/img/room-default.jpg';
-                    ?>
-                            <div class="room-card">
-                                <div class="room-header">
-                                    <span class="room-badge"><?= $roomTypeIcon ?> <?= $room['RoomType'] ?></span>
-                                    <span class="price-tag"><?= number_format($room['RoomPrice']) ?> đ/tháng</span>
-                                </div>
-
-                                <div class="room-body">
-
-                                    <img src="<?= htmlspecialchars($roomImage) ?>"
-                                        onerror="this.onerror=null;this.src='assets/img/room-default.jpg';"
-                                        alt="Phòng <?= htmlspecialchars($room['RoomNumber']) ?>"
-                                        class="room-thumb">
-
-                                    <h3>Phòng <?= htmlspecialchars($room['RoomNumber']) ?></h3>
-                                    <p class="building-name">🏢 <?= htmlspecialchars($room['BuildingName']) ?></p>
-
-                                    <div class="room-details">
-                                        <div class="detail-item">
-                                            <i class="fas fa-users"></i>
-                                            <span>Còn <?= (int)$room['AvailableSlots'] ?>/<?= (int)$room['Capacity'] ?> chỗ</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <i class="fas fa-user-check"></i>
-                                            <span>Đã có <?= (int)$room['CurrentOccupants'] ?> sinh viên ở</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <i class="fas fa-expand"></i>
-                                            <span><?= intval($room['Capacity']) * 4 ?> m²</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="room-footer">
-                                    <?php if (!$hasRoom): ?>
-                                        <a href="modules/user/rooms/room_detail.php?id=<?= $room['RoomID'] ?>" class="btn btn-primary">
-                                            <i class="fas fa-eye"></i> Xem chi tiết
-                                        </a>
-
-                                        <a href="modules/user/rooms/register_room.php" class="btn btn-rgb">
-                                            <i class="fas fa-edit"></i> Đăng ký phòng
-                                        </a>
-                                    <?php else: ?>
-                                        <button class="btn btn-secondary" disabled>
-                                            <i class="fas fa-check"></i> Bạn đã có phòng
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                        <?php endwhile;
-                    else: ?>
-
-                        <div class="no-rooms center-block">
-                            <i class="fas fa-bed fa-3x"></i>
-                            <h3>Hiện không có phòng trống</h3>
-                        </div>
-
-                    <?php endif; ?>
-                </div>
-            </section>
-
-
-            <!-- Dịch vụ -->
-            <section class="features">
-                <div class="section-title">
-                    <h2>Dịch vụ của chúng tôi</h2>
-                </div>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-home"></i></div>
-                        <h3>Phòng ở tiện nghi</h3>
-                        <p>Phòng nội trú sạch đẹp, nội thất đầy đủ.</p>
-                        <a href="login.php" class="learn-more">Đăng ký phòng →</a>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-file-invoice"></i></div>
-                        <h3>Hóa đơn rõ ràng</h3>
-                        <p>Dễ dàng kiểm tra điện nước, thanh toán minh bạch.</p>
-                        <a href="login.php" class="learn-more">Xem hóa đơn →</a>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-comments"></i></div>
-                        <h3>Phản ánh & Góp ý</h3>
-                        <p>Hệ thống phản ánh nhanh chóng.</p>
-                        <a href="login.php" class="learn-more">Gửi phản ánh →</a>
-                    </div>
-                </div>
-            </section>
-
-        <?php else: ?>
-
-            <!-- ===========================================================
-         🔹 GIAO DIỆN SINH VIÊN — ĐÃ ĐĂNG NHẬP
-    ============================================================ -->
-
-            <section class="dashboard">
-                <div class="section-title">
-                    <?php
-                    $fullName = $info['FullName'] ?? ($_SESSION['FullName'] ?? 'Bạn');
-                    ?>
-                    <h2>👋 Xin chào, <?= htmlspecialchars($fullName) ?></h2>
-                </div>
-
-                <div class="student-info">
-                    <?php if ($hasRoom): ?>
-                        <div class="info-grid">
-                            <div class="info-item"><i class="fas fa-id-card"></i>
-                                <div><strong>Mã sinh viên</strong>
-                                    <p><?= $info['StudentCode'] ?></p>
-                                </div>
-                            </div>
-
-                            <div class="info-item"><i class="fas fa-door-open"></i>
-                                <div><strong>Phòng hiện tại</strong>
-                                    <p><?= $info['RoomNumber'] ?> (<?= $info['RoomType'] ?>)</p>
-                                </div>
-                            </div>
-
-                            <div class="info-item"><i class="fas fa-building"></i>
-                                <div><strong>Tòa nhà</strong>
-                                    <p><?= $info['BuildingName'] ?></p>
-                                </div>
-                            </div>
-
-                            <div class="info-item"><i class="fas fa-calendar-alt"></i>
-                                <div><strong>Thời hạn hợp đồng</strong>
-                                    <p><?= date('d/m/Y', strtotime($info['StartDate'])) ?> → <?= date('d/m/Y', strtotime($info['EndDate'])) ?></p>
-                                </div>
-                            </div>
-                        </div>
-
-                    <?php else: ?>
-                        <div class="no-contract">
-                            <i class="fas fa-home fa-3x"></i>
-                            <h3>Bạn chưa có hợp đồng phòng</h3>
-                            <p>Đăng ký phòng để bắt đầu sinh sống tại KTX</p>
-                            <a href="modules/user/rooms/register_room.php" class="btn btn-rgb">Đăng ký phòng ngay</a>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </section>
-
-
-            <!-- ===========================================================
-         🔹 PHÒNG TRỐNG CHO SINH VIÊN ĐÃ ĐĂNG NHẬP
-    ============================================================ -->
-            <section class="available-rooms">
-                <div class="section-title">
-                    <h2>🚀 Phòng Trống Hiện Có</h2>
-                </div>
-
-                <!-- Form tìm kiếm phòng -->
-                <div class="search-form-container">
-                    <form method="GET" action="" class="room-search-form" id="roomFilterForm">
-                        <div class="search-filters">
-                            <div class="filter-item">
-                                <label for="building"><i class="fas fa-building"></i> Tòa nhà</label>
-                                <select name="building" id="building">
-                                    <option value=""> Tất cả tòa nhà </option>
-                                    <?php foreach ($buildings as $building): ?>
-                                        <option value="<?= $building['BuildingID'] ?>"
-                                            <?= $searchBuilding == $building['BuildingID'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($building['BuildingName']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="filter-item">
-                                <label for="room_type"><i class="fas fa-venus-mars"></i> Loại phòng</label>
-                                <select name="room_type" id="room_type">
-                                    <option value=""> Tất cả </option>
-                                    <option value="Nam" <?= $searchRoomType == 'Nam' ? 'selected' : '' ?>>♂️ Nam</option>
-                                    <option value="Nữ" <?= $searchRoomType == 'Nữ' ? 'selected' : '' ?>>♀️ Nữ</option>
-                                </select>
-                            </div>
-
-                            <div class="filter-item">
-                                <label for="max_price_range">
-                                    <i class="fas fa-money-bill-wave"></i> Giá tối đa:
-                                    <span id="max_price_text">
-                                        <?= $searchMaxPrice ? number_format($searchMaxPrice) . ' đ' : 'Không giới hạn' ?>
-                                    </span>
-                                </label>
-
-                                <input type="range"
-                                    id="max_price_range"
-                                    name="max_price"
-                                    min="0" max="3000000" step="50000"
-                                    value="<?= $searchMaxPrice ?: 0 ?>">
-                            </div>
-
-                            <!-- Có thể giữ nút Đặt lại nếu thích -->
-                            <div class="filter-actions">
-                                <a href="index.php" class="btn btn-secondary">
-                                    <i class="fas fa-redo"></i> Đặt lại
-                                </a>
-                            </div>
-
-                            <!-- Submit ẩn cho trình duyệt cũ / enter -->
-                            <button type="submit" style="display:none"></button>
-                        </div>
-                    </form>
-                </div>
-
-
-                <div class="rooms-grid">
-
-                    <?php
-                    // Xây dựng câu query với điều kiện tìm kiếm cho sinh viên
-                    $whereClauses2 = ["r.Status = 'Trống'"];
-                    $params2 = [];
-                    $types2 = "";
-
-                    if (!empty($searchBuilding)) {
-                        $whereClauses2[] = "b.BuildingID = ?";
-                        $params2[] = $searchBuilding;
-                        $types2 .= "i";
-                    }
-
-                    if (!empty($searchRoomType)) {
-                        $whereClauses2[] = "r.RoomType = ?";
-                        $params2[] = $searchRoomType;
-                        $types2 .= "s";
-                    }
-
-                    if (!empty($searchMaxPrice)) {
-                        $whereClauses2[] = "r.RoomPrice <= ?";
-                        $params2[] = $searchMaxPrice;
-                        $types2 .= "d";
-                    }
-
-                    $whereSQL2 = implode(" AND ", $whereClauses2);
-
-                    $searchSQL2 = "
-                        SELECT 
-                            r.*, 
-                            b.BuildingName,
-                            (
-                                SELECT COUNT(*) 
-                                FROM Contracts c 
-                                WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực'
-                            ) AS CurrentOccupants,
-                            (
-                                r.Capacity -
-                                (
-                                    SELECT COUNT(*) 
-                                    FROM Contracts c 
-                                    WHERE c.RoomID = r.RoomID AND c.Status = 'Hiệu lực'
-                                )
-                            ) AS AvailableSlots
-                        FROM Rooms r
-                        JOIN Buildings b ON b.BuildingID = r.BuildingID
-                        WHERE $whereSQL2
-                        ORDER BY r.RoomPrice ASC
-                        LIMIT 6
-                    ";
-
-                    if (!empty($params2)) {
-                        $stmt = $conn->prepare($searchSQL2);
-                        $stmt->bind_param($types2, ...$params2);
-                        $stmt->execute();
-                        $availableRooms = $stmt->get_result();
-                    } else {
-                        $availableRooms = $conn->query($searchSQL2);
-                    }
-
-                    if ($availableRooms->num_rows > 0):
-                        while ($room = $availableRooms->fetch_assoc()):
-                            $roomTypeIcon = $room['RoomType'] == 'Nam' ? '♂️' : ($room['RoomType'] == 'Nữ' ? '♀️' : '⚧');
-
-                            $roomImage = !empty($room['ImagePath'])
-                                ? $room['ImagePath']
-                                : 'assets/img/room-default.jpg';
-                    ?>
-                            <div class="room-card">
-                                <div class="room-header">
-                                    <span class="room-badge"><?= $roomTypeIcon ?> <?= $room['RoomType'] ?></span>
-                                    <span class="price-tag"><?= number_format($room['RoomPrice']) ?> đ/tháng</span>
-                                </div>
-
-                                <div class="room-body">
-                                    <img src="<?= htmlspecialchars($roomImage) ?>"
-                                        onerror="this.onerror=null;this.src='assets/img/room-default.jpg';"
-                                        alt="Phòng <?= $room['RoomNumber'] ?>"
-                                        class="room-thumb">
-
-                                    <h3>Phòng <?= $room['RoomNumber'] ?></h3>
-                                    <p class="building-name">🏢 <?= $room['BuildingName'] ?></p>
-
-                                    <div class="room-details">
-                                        <div class="detail-item">
-                                            <i class="fas fa-users"></i>
-                                            <span><?= $room['AvailableSlots'] ?>/<?= $room['Capacity'] ?> chỗ</span>
-                                        </div>
-
-                                        <div class="detail-item">
-                                            <i class="fas fa-user-check"></i>
-                                            <span>Đã có <?= (int)$room['CurrentOccupants'] ?> sinh viên ở</span>
-                                        </div>
-
-                                        <div class="detail-item">
-                                            <i class="fas fa-expand"></i>
-                                            <span><?= $room['Capacity'] * 4 ?> m²</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="room-footer">
-                                    <?php if (!$hasRoom): ?>
-                                        <a href="modules/user/rooms/room_detail.php?id=<?= $room['RoomID'] ?>" class="btn btn-primary">
-                                            <i class="fas fa-eye"></i> Xem chi tiết
-                                        </a>
-
-                                        <a href="modules/user/rooms/register_room.php" class="btn btn-rgb">
-                                            <i class="fas fa-edit"></i> Đăng ký phòng
-                                        </a>
-                                    <?php else: ?>
-                                        <button class="btn btn-secondary" disabled>
-                                            <i class="fas fa-check"></i> Bạn đã có phòng
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-
-                            </div>
-
-                        <?php endwhile;
-                    else: ?>
-
-                        <div class="no-rooms center-block">
-                            <i class="fas fa-bed fa-3x"></i>
-                            <h3>Hiện không có phòng trống</h3>
-                        </div>
-
-                    <?php endif; ?>
-                </div>
-            </section>
-
-        <?php endif; ?>
-
-        <!-- ===========================================================
-         🔹 THÔNG BÁO NỔI BẬT
-    ============================================================ -->
-        <section class="announcements-section">
-            <div class="section-title">
-                <h2><i class="fas fa-bullhorn"></i> Thông báo nổi bật</h2>
-                <p>Cập nhật tin tức mới nhất từ ban quản lý ký túc xá</p>
             </div>
 
-            <div class="announcements-grid">
-                <?php
-                // Lấy 3 thông báo mới nhất từ bảng announcements
-                $announcementsQuery = $conn->query("
-                SELECT AnnouncementID, Title, Content, DatePosted, PostedBy
-                FROM announcements
-                WHERE DatePosted <= NOW()
-                ORDER BY DatePosted DESC
-                LIMIT 3
-            ");
+            <div class="hero-stage__rail">
+                <?php foreach ($heroHighlights as $highlight): ?>
+                    <div class="hero-highlight">
+                        <span class="hero-highlight__label"><?= htmlspecialchars($highlight['label']) ?></span>
+                        <strong class="hero-highlight__value"><?= htmlspecialchars($highlight['value']) ?></strong>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
 
-                if ($announcementsQuery && $announcementsQuery->num_rows > 0):
-                    while ($announcement = $announcementsQuery->fetch_assoc()):
-                        // Tự động phân loại category dựa vào title
-                        $title = $announcement['Title'];
-                        if (stripos($title, 'khẩn cấp') !== false || stripos($title, 'cảnh báo') !== false) {
-                            $category = 'Khẩn cấp';
-                            $categoryIcon = 'fa-exclamation-triangle';
-                            $categoryColor = '#e63946';
-                        } elseif (stripos($title, 'sự kiện') !== false || stripos($title, 'hoạt động') !== false) {
-                            $category = 'Sự kiện';
-                            $categoryIcon = 'fa-calendar-star';
-                            $categoryColor = '#f4a261';
-                        } elseif (stripos($title, 'bảo trì') !== false || stripos($title, 'sửa chữa') !== false || stripos($title, 'cúp điện') !== false) {
-                            $category = 'Bảo trì';
-                            $categoryIcon = 'fa-wrench';
-                            $categoryColor = '#7209b7';
-                        } else {
-                            $category = 'Thông báo chung';
-                            $categoryIcon = 'fa-info-circle';
-                            $categoryColor = '#4895ef';
-                        }
-                ?>
-                        <div class="announcement-card">
-                            <div class="announcement-header">
-                                <span class="announcement-category" style="background: <?= $categoryColor ?>15; color: <?= $categoryColor ?>;">
-                                    <i class="fas <?= $categoryIcon ?>"></i>
-                                    <?= htmlspecialchars($category) ?>
-                                </span>
-                                <span class="announcement-date">
-                                    <i class="far fa-clock"></i>
-                                    <?= date('d/m/Y', strtotime($announcement['DatePosted'])) ?>
-                                </span>
-                            </div>
-                            <h3><?= htmlspecialchars($announcement['Title']) ?></h3>
-                            <p><?= htmlspecialchars(mb_substr($announcement['Content'], 0, 120)) ?>...</p>
-                            <a href="/modules/user/accesslogs.php?view=<?= (int)$announcement['AnnouncementID'] ?>" class="read-more">
-                                Xem chi tiết <i class="fas fa-arrow-right"></i>
+    <section id="room-availability" class="availability-section">
+        <div class="section-shell">
+            <div class="section-heading" data-reveal>
+                <p class="section-heading__eyebrow">Dữ liệu phòng đang mở</p>
+                <h2><?= htmlspecialchars($roomSectionTitle) ?></h2>
+                <p><?= htmlspecialchars($roomSectionBody) ?></p>
+            </div>
+
+            <form method="GET" action="" class="availability-filter" id="roomFilterForm" data-reveal>
+                <div class="availability-filter__group">
+                    <label for="building">Tòa nhà</label>
+                    <select name="building" id="building">
+                        <option value="">Tất cả tòa nhà</option>
+                        <?php foreach ($buildings as $building): ?>
+                            <option value="<?= (int)$building['BuildingID'] ?>" <?= $searchBuilding === (string)$building['BuildingID'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($building['BuildingName']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="availability-filter__group">
+                    <label for="room_type">Loại phòng</label>
+                    <select name="room_type" id="room_type">
+                        <option value="">Tất cả</option>
+                        <option value="Nam" <?= $searchRoomType === 'Nam' ? 'selected' : '' ?>>Nam</option>
+                        <option value="Nữ" <?= $searchRoomType === 'Nữ' ? 'selected' : '' ?>>Nữ</option>
+                    </select>
+                </div>
+
+                <div class="availability-filter__group availability-filter__group--range">
+                    <label for="max_price_range">
+                        Mức giá tối đa
+                        <span id="max_price_text">
+                            <?= ($searchMaxPrice !== '' && is_numeric($searchMaxPrice) && (float)$searchMaxPrice > 0)
+                                ? number_format((float)$searchMaxPrice) . ' đ'
+                                : 'Không giới hạn' ?>
+                        </span>
+                    </label>
+                    <input
+                        type="range"
+                        id="max_price_range"
+                        name="max_price"
+                        min="0"
+                        max="3000000"
+                        step="50000"
+                        value="<?= ($searchMaxPrice !== '' && is_numeric($searchMaxPrice)) ? (float)$searchMaxPrice : 0 ?>">
+                </div>
+
+                <div class="availability-filter__actions">
+                    <a href="<?= htmlspecialchars($base) ?>index.php" class="hero-button hero-button--ghost">Đặt lại bộ lọc</a>
+                </div>
+
+                <button type="submit" class="visually-hidden">Lọc phòng</button>
+            </form>
+
+            <div class="room-list">
+                <?php if ($featuredRooms !== []): ?>
+                    <?php foreach ($featuredRooms as $room): ?>
+                        <?php
+                        $roomImage = !empty($room['ImagePath']) ? $room['ImagePath'] : 'assets/img/room-default.jpg';
+                        $roomPrice = number_format((float)$room['RoomPrice']) . ' đ / tháng';
+                        $roomArea = ((int)$room['Capacity'] * 4) . ' m²';
+                        $availableSlots = max(0, (int)$room['AvailableSlots']);
+                        $detailHref = $base . 'modules/user/rooms/room_detail.php?id=' . (int)$room['RoomID'];
+                        ?>
+                        <article class="room-row" data-reveal>
+                            <a href="<?= htmlspecialchars($detailHref) ?>" class="room-row__image" aria-label="Xem chi tiết phòng <?= htmlspecialchars($room['RoomNumber']) ?>">
+                                <img
+                                    src="<?= htmlspecialchars($roomImage) ?>"
+                                    alt="Phòng <?= htmlspecialchars($room['RoomNumber']) ?>"
+                                    onerror="this.onerror=null;this.src='assets/img/room-default.jpg';">
                             </a>
-                        </div>
-                    <?php
-                    endwhile;
-                else:
-                    ?>
-                    <div class="no-announcements">
-                        <i class="fas fa-info-circle fa-2x"></i>
-                        <p>Hiện chưa có thông báo mới</p>
+
+                            <div class="room-row__content">
+                                <div class="room-row__topline">
+                                    <span class="room-row__type"><?= htmlspecialchars($room['RoomType']) ?></span>
+                                    <span class="room-row__price"><?= htmlspecialchars($roomPrice) ?></span>
+                                </div>
+
+                                <h3>Phòng <?= htmlspecialchars($room['RoomNumber']) ?></h3>
+                                <p class="room-row__location"><?= htmlspecialchars($room['BuildingName']) ?></p>
+
+                                <dl class="room-row__meta">
+                                    <div>
+                                        <dt>Còn chỗ</dt>
+                                        <dd><?= $availableSlots ?>/<?= (int)$room['Capacity'] ?></dd>
+                                    </div>
+                                    <div>
+                                        <dt>Đang ở</dt>
+                                        <dd><?= (int)$room['CurrentOccupants'] ?> sinh viên</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Diện tích</dt>
+                                        <dd><?= htmlspecialchars($roomArea) ?></dd>
+                                    </div>
+                                </dl>
+
+                                <div class="room-row__actions">
+                                    <a href="<?= htmlspecialchars($detailHref) ?>" class="text-link">Xem chi tiết</a>
+
+                                    <?php if ($pageMode === 'guest'): ?>
+                                        <a href="<?= htmlspecialchars($base) ?>login.php" class="hero-button hero-button--primary">Đăng nhập để đăng ký</a>
+                                    <?php elseif ($pageMode === 'applicant'): ?>
+                                        <a href="<?= htmlspecialchars($base) ?>modules/user/rooms/register_room.php" class="hero-button hero-button--primary">Gửi yêu cầu</a>
+                                    <?php elseif ($pageMode === 'staff'): ?>
+                                        <a href="<?= htmlspecialchars($base) ?>modules/staff/rooms/rooms.php" class="hero-button hero-button--primary">Quản lý phòng</a>
+                                    <?php else: ?>
+                                        <span class="room-row__status">Bạn đã có hợp đồng hiệu lực</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="empty-state" data-reveal>
+                        <p class="empty-state__eyebrow">Không tìm thấy kết quả phù hợp</p>
+                        <h3>Hiện chưa có phòng trống theo bộ lọc bạn chọn.</h3>
+                        <p>Thử nới mức giá hoặc đổi tòa nhà để xem thêm lựa chọn đang mở.</p>
                     </div>
                 <?php endif; ?>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- ===========================================================
-         🔹 FAQ ACCORDION
-    ============================================================ -->
-        <section class="faq-section">
-            <div class="section-title">
-                <h2><i class="fas fa-question-circle"></i> Câu hỏi thường gặp</h2>
-                <p>Giải đáp các thắc mắc về ký túc xá</p>
-            </div>
+    <section id="living-flow" class="living-section">
+        <div class="section-shell living-section__grid">
+            <figure class="living-section__image" data-reveal>
+                <img src="assets/img/rooms/room_1_d403f0bc.webp" alt="Không gian phòng ở ký túc xá">
+                <figcaption>Một bề mặt nội trú tốt phải cho thấy được không gian ở thật, không chỉ mô tả bằng lời.</figcaption>
+            </figure>
 
-            <div class="faq-container">
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-user-plus"></i> Làm thế nào để đăng ký phòng ở KTX?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Bước 1:</strong> Đăng nhập vào hệ thống bằng tài khoản sinh viên</p>
-                        <p><strong>Bước 2:</strong> Vào mục "Đăng ký phòng" hoặc chọn phòng trống trên trang chủ</p>
-                        <p><strong>Bước 3:</strong> Điền đầy đủ thông tin và chọn phòng phù hợp</p>
-                        <p><strong>Bước 4:</strong> Chờ ban quản lý duyệt yêu cầu (1-3 ngày làm việc)</p>
-                        <p><strong>Bước 5:</strong> Sau khi được duyệt, thanh toán tiền cọc và nhận phòng</p>
-                    </div>
+            <div class="living-section__content">
+                <div class="section-heading" data-reveal>
+                    <p class="section-heading__eyebrow">Vận hành hằng ngày</p>
+                    <h2>Ở trong một hệ thống rõ ràng, không phải một chuỗi thủ tục rời rạc.</h2>
+                    <p>Trang chủ không dừng ở mức giới thiệu. Nó dẫn thẳng đến phòng đang mở, luồng nội trú và những cập nhật mới nhất từ ban quản lý.</p>
                 </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-money-bill-wave"></i> Chính sách thanh toán và hoàn trả như thế nào?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Tiền phòng:</strong> Thanh toán theo tháng, hạn chót ngày 5 hàng tháng</p>
-                        <p><strong>Tiền cọc:</strong> Bằng 1 tháng tiền phòng, hoàn trả khi kết thúc hợp đồng</p>
-                        <p><strong>Điện nước:</strong> Tính theo đồng hồ thực tế, thanh toán cùng tiền phòng</p>
-                        <p><strong>Phương thức:</strong> VNPay, MoMo, Chuyển khoản ngân hàng</p>
-                        <p><strong>Hoàn trả:</strong> Tiền cọc được hoàn trong vòng 7 ngày sau khi trả phòng (trừ các khoản phạt nếu có)</p>
-                    </div>
+                <div class="living-points" data-reveal>
+                    <?php foreach ($livingPoints as $point): ?>
+                        <article class="living-point">
+                            <div class="living-point__icon">
+                                <i class="fas <?= htmlspecialchars($point['icon']) ?>"></i>
+                            </div>
+                            <div>
+                                <h3><?= htmlspecialchars($point['title']) ?></h3>
+                                <p><?= htmlspecialchars($point['copy']) ?></p>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-file-contract"></i> Nội quy KTX có những điều gì?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Giờ giấc:</strong> Đóng cửa lúc 23:00, mở cửa 5:00 sáng</p>
-                        <p><strong>Khách thăm:</strong> Đăng ký trước, không qua đêm</p>
-                        <p><strong>Vệ sinh:</strong> Giữ gìn vệ sinh phòng ở và khu vực chung</p>
-                        <p><strong>Cấm:</strong> Sử dụng chất kích thích, gây ồn, nuôi động vật, nấu ăn trong phòng</p>
-                        <p><strong>Tài sản:</strong> Bảo quản tài sản KTX, bồi thường nếu làm hư hỏng</p>
+                <div class="announcement-feed" data-reveal>
+                    <div class="announcement-feed__head">
+                        <div>
+                            <p class="section-heading__eyebrow">Thông báo mới nhất</p>
+                            <h3>Bảng tin nổi bật</h3>
+                        </div>
+                        <a href="<?= htmlspecialchars($base) ?>modules/user/accesslogs.php" class="text-link">Xem tất cả</a>
                     </div>
-                </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-tools"></i> Phòng có những tiện nghi gì?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Nội thất cơ bản:</strong> Giường, tủ quần áo, bàn học, ghế</p>
-                        <p><strong>Điện tử:</strong> Quạt trần/điều hòa (tùy loại phòng), ổ cắm điện</p>
-                        <p><strong>Vệ sinh:</strong> Nhà vệ sinh riêng/chung (tùy loại phòng)</p>
-                        <p><strong>Internet:</strong> WiFi miễn phí tốc độ cao</p>
-                        <p><strong>Tiện ích chung:</strong> Máy giặt, bàn ping pong, phòng tập gym, khu BBQ</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-headset"></i> Liên hệ hỗ trợ khi cần?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Hotline:</strong> 1900-xxxx-xxx (24/7)</p>
-                        <p><strong>Email:</strong> ktx@university.edu.vn</p>
-                        <p><strong>Văn phòng:</strong> Tòa A - Tầng 1 (8:00 - 17:00 T2-T6)</p>
-                        <p><strong>Online:</strong> Gửi phản ánh qua hệ thống hoặc chat với admin</p>
-                        <p><strong>Khẩn cấp:</strong> Liên hệ bảo vệ tại cổng hoặc gọi 113</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span><i class="fas fa-sign-out-alt"></i> Quy trình trả phòng như thế nào?</span>
-                        <i class="fas fa-chevron-down faq-icon"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <p><strong>Bước 1:</strong> Thông báo trước ít nhất 15 ngày</p>
-                        <p><strong>Bước 2:</strong> Thanh toán hết các khoản nợ (tiền phòng, điện, nước)</p>
-                        <p><strong>Bước 3:</strong> Dọn dẹp phòng, trả chìa khóa</p>
-                        <p><strong>Bước 4:</strong> Ban quản lý kiểm tra tình trạng phòng</p>
-                        <p><strong>Bước 5:</strong> Nhận lại tiền cọc (nếu không có hư hỏng)</p>
-                    </div>
+                    <?php if ($announcements !== []): ?>
+                        <div class="announcement-feed__list">
+                            <?php foreach ($announcements as $announcement): ?>
+                                <?php $meta = homepage_announcement_meta($announcement['Title']); ?>
+                                <article class="announcement-row">
+                                    <div class="announcement-row__meta">
+                                        <span class="announcement-row__tag">
+                                            <i class="fas <?= htmlspecialchars($meta['icon']) ?>"></i>
+                                            <?= htmlspecialchars($meta['label']) ?>
+                                        </span>
+                                        <span><?= date('d/m/Y', strtotime($announcement['DatePosted'])) ?></span>
+                                    </div>
+                                    <h4><?= htmlspecialchars($announcement['Title']) ?></h4>
+                                    <p><?= htmlspecialchars(mb_strimwidth($announcement['Content'], 0, 140, '...')) ?></p>
+                                    <a href="<?= htmlspecialchars($base) ?>modules/user/accesslogs.php?view=<?= (int)$announcement['AnnouncementID'] ?>" class="text-link">
+                                        Mở chi tiết
+                                    </a>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="announcement-feed__empty">Hiện chưa có thông báo mới.</p>
+                    <?php endif; ?>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-    </main>
+    <section class="final-cta">
+        <div class="section-shell final-cta__grid">
+            <div class="final-cta__lead" data-reveal>
+                <p class="section-heading__eyebrow">Bước tiếp theo</p>
+                <h2><?= htmlspecialchars($ctaTitle) ?></h2>
+                <p><?= htmlspecialchars($ctaBody) ?></p>
 
-    <?php include 'includes/footer.php'; ?>
+                <div class="hero-actions">
+                    <a href="<?= htmlspecialchars($ctaPrimaryHref) ?>" class="hero-button hero-button--primary">
+                        <?= htmlspecialchars($ctaPrimaryLabel) ?>
+                    </a>
+                    <a href="<?= htmlspecialchars($ctaSecondaryHref) ?>" class="hero-button hero-button--secondary">
+                        <?= htmlspecialchars($ctaSecondaryLabel) ?>
+                    </a>
+                </div>
+
+                <div class="support-lines">
+                    <div>
+                        <span>Hotline</span>
+                        <strong>1900 1234</strong>
+                    </div>
+                    <div>
+                        <span>Email</span>
+                        <strong>admin@ktx.edu.vn</strong>
+                    </div>
+                    <div>
+                        <span>Văn phòng</span>
+                        <strong>Tòa A, tầng 1</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-panel" data-reveal>
+                <p class="section-heading__eyebrow">Câu hỏi thường gặp</p>
+                <div class="faq-list">
+                    <?php foreach ($faqItems as $faq): ?>
+                        <div class="faq-item">
+                            <button class="faq-question" type="button" aria-expanded="false">
+                                <span><?= htmlspecialchars($faq['question']) ?></span>
+                                <i class="fas fa-plus faq-icon"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><?= htmlspecialchars($faq['answer']) ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<?php include 'includes/footer.php'; ?>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('roomFilterForm');
-        if (!form) return;
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('roomFilterForm');
+    const building = document.getElementById('building');
+    const roomType = document.getElementById('room_type');
+    const maxPrice = document.getElementById('max_price_range');
+    const maxPriceText = document.getElementById('max_price_text');
+    const revealItems = document.querySelectorAll('[data-reveal]');
+    const faqItems = document.querySelectorAll('.faq-item');
+    const heroStage = document.querySelector('.hero-stage');
 
-        const building = document.getElementById('building');
-        const roomType = document.getElementById('room_type');
-        const maxPrice = document.getElementById('max_price_range');
-        const maxPriceText = document.getElementById('max_price_text');
-
-        function submitForm() {
+    function submitForm() {
+        if (form) {
             form.submit();
         }
+    }
 
-        if (building) {
-            building.addEventListener('change', submitForm);
-        }
+    if (building) {
+        building.addEventListener('change', submitForm);
+    }
 
-        if (roomType) {
-            roomType.addEventListener('change', submitForm);
-        }
+    if (roomType) {
+        roomType.addEventListener('change', submitForm);
+    }
 
-        if (maxPrice) {
-            // cập nhật text + submit
-            maxPrice.addEventListener('change', function() {
-                const v = Number(this.value);
-                if (maxPriceText) {
-                    maxPriceText.textContent = v > 0 ?
-                        v.toLocaleString('vi-VN') + ' đ' :
-                        'Không giới hạn';
+    if (maxPrice) {
+        maxPrice.addEventListener('input', function () {
+            const value = Number(this.value);
+            if (maxPriceText) {
+                maxPriceText.textContent = value > 0 ? value.toLocaleString('vi-VN') + ' đ' : 'Không giới hạn';
+            }
+        });
+
+        maxPrice.addEventListener('change', function () {
+            const value = Number(this.value);
+            if (maxPriceText) {
+                maxPriceText.textContent = value > 0 ? value.toLocaleString('vi-VN') + ' đ' : 'Không giới hạn';
+            }
+            submitForm();
+        });
+    }
+
+    if ('IntersectionObserver' in window && revealItems.length > 0) {
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
                 }
-                submitForm();
             });
+        }, { threshold: 0.16 });
 
-            // chỉ cập nhật text khi đang kéo, không submit
-            maxPrice.addEventListener('input', function() {
-                const v = Number(this.value);
-                if (maxPriceText) {
-                    maxPriceText.textContent = v > 0 ?
-                        v.toLocaleString('vi-VN') + ' đ' :
-                        'Không giới hạn';
-                }
-            });
+        revealItems.forEach(function (item, index) {
+            item.style.setProperty('--reveal-delay', (index * 70) + 'ms');
+            observer.observe(item);
+        });
+    } else {
+        revealItems.forEach(function (item) {
+            item.classList.add('is-visible');
+        });
+    }
+
+    function updateHeroShift() {
+        if (!heroStage) {
+            return;
         }
 
-        // ===== FAQ ACCORDION =====
-        const faqItems = document.querySelectorAll('.faq-item');
+        const shift = Math.min(window.scrollY * 0.18, 72);
+        heroStage.style.setProperty('--hero-shift', shift + 'px');
+    }
 
-        faqItems.forEach(item => {
-            const question = item.querySelector('.faq-question');
-            if (!question) return;
+    updateHeroShift();
+    window.addEventListener('scroll', updateHeroShift, { passive: true });
 
-            question.addEventListener('click', () => {
-                const isActive = item.classList.contains('active');
+    faqItems.forEach(function (item) {
+        const button = item.querySelector('.faq-question');
+        if (!button) {
+            return;
+        }
 
-                // Đóng tất cả FAQ khác
-                faqItems.forEach(otherItem => {
-                    if (otherItem !== item) {
-                        otherItem.classList.remove('active');
-                    }
-                });
+        button.addEventListener('click', function () {
+            const isOpen = item.classList.contains('active');
 
-                // Toggle FAQ hiện tại
-                item.classList.toggle('active', !isActive);
+            faqItems.forEach(function (otherItem) {
+                const otherButton = otherItem.querySelector('.faq-question');
+                otherItem.classList.remove('active');
+                if (otherButton) {
+                    otherButton.setAttribute('aria-expanded', 'false');
+                }
             });
+
+            item.classList.toggle('active', !isOpen);
+            button.setAttribute('aria-expanded', String(!isOpen));
         });
     });
+});
 </script>
 </body>
 </html>

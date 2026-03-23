@@ -12,6 +12,9 @@ require_once __DIR__ . '/error_handler.php';
 $isLoggedIn  = isset($_SESSION['UserID']);
 $role        = $_SESSION['Role'] ?? 'Guest';
 $displayName = $_SESSION['FullName'] ?? $_SESSION['Username'] ?? 'Tài khoản';
+$pageTitle = $pageTitle ?? 'Ký túc xá Sinh viên';
+$pageBodyClass = trim('app-shell app-shell--user ' . ($pageBodyClass ?? ''));
+$pageStylesheets = $pageStylesheets ?? [];
 
 // Active menu logic
 $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -60,16 +63,21 @@ if (!empty($_SESSION['UserID'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ký túc xá Sinh viên</title>
+    <title><?= htmlspecialchars($pageTitle) ?></title>
 
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
     <link rel="stylesheet" href="<?= $base ?>assets/css/header.css">
     <link rel="stylesheet" href="<?= $base ?>assets/css/footer.css">
     <link rel="stylesheet" href="<?= $base ?>assets/css/index.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/app_shell.css">
+    <?php foreach ($pageStylesheets as $stylesheet): ?>
+        <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>">
+    <?php endforeach; ?>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
-<body>
+<body<?= $pageBodyClass !== '' ? ' class="' . htmlspecialchars($pageBodyClass) . '"' : '' ?>>
     <header class="admin-header">
         <div class="left">
             <a href="<?= $base ?>index.php" class="logo">

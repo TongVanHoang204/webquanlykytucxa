@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+body {
+    background:
+        radial-gradient(circle at top left, rgba(212, 160, 97, 0.24), transparent 34%),
+        radial-gradient(circle at right 20%, rgba(24, 60, 87, 0.22), transparent 32%),
+        linear-gradient(180deg, #efe7dc 0%, #f6efe4 100%) !important;
+    color: #11202f !important;
+    font-family: 'Manrope', 'Segoe UI', sans-serif !important;
+}
+
+.auth-wrapper {
+    max-width: 500px !important;
+}
+
+.auth-card {
+    background: rgba(255, 250, 242, 0.94) !important;
+    border: 1px solid rgba(17, 32, 47, 0.1) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 24px 60px rgba(17, 32, 47, 0.14) !important;
+    padding: 30px 28px 24px !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.auth-card::before {
+    background:
+        radial-gradient(circle at top left, rgba(212, 160, 97, 0.16), transparent 44%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 36%) !important;
+    opacity: 1 !important;
+}
+
+.auth-header {
+    margin-bottom: 18px !important;
+}
+
+.auth-header h2,
+.auth-card > h2:first-of-type {
+    font-family: 'Cormorant Garamond', Georgia, serif !important;
+    font-size: 2.4rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.03em !important;
+    color: #11202f !important;
+}
+
+.auth-header p,
+.auth-footer,
+.hint,
+.login-meta {
+    color: #5f6975 !important;
+}
+
+.input-group label,
+form label {
+    color: #11202f !important;
+    font-weight: 700 !important;
+}
+
+.input-with-icon,
+form input:not([type="checkbox"]):not([type="radio"]) {
+    border-radius: 18px !important;
+    border: 1px solid rgba(17, 32, 47, 0.12) !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    box-shadow: none !important;
+}
+
+.input-with-icon:focus-within,
+form input:not([type="checkbox"]):not([type="radio"]):focus {
+    border-color: #b67c3f !important;
+    box-shadow: 0 0 0 4px rgba(182, 124, 63, 0.14) !important;
+}
+
+.input-with-icon i,
+.toggle-password,
+.toggle-password i {
+    color: #7b8792 !important;
+}
+
+.toggle-password:hover {
+    color: #b67c3f !important;
+}
+
+.btn-primary,
+button[type="submit"] {
+    border-radius: 999px !important;
+    border: 1px solid transparent !important;
+    background: #b67c3f !important;
+    color: #1a1107 !important;
+    box-shadow: none !important;
+    transition: transform 0.25s ease, filter 0.25s ease !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover {
+    transform: translateY(-2px) !important;
+    filter: brightness(1.02);
+}
+
+.btn-social {
+    border-radius: 999px !important;
+    border: 1px solid rgba(17, 32, 47, 0.12) !important;
+    background: rgba(255, 255, 255, 0.74) !important;
+    color: #11202f !important;
+}
+
+.btn-social:hover {
+    border-color: #b67c3f !important;
+    color: #b67c3f !important;
+}
+
+.alert {
+    border-radius: 20px !important;
+    border-width: 1px !important;
+    box-shadow: none !important;
+}
+
+.alert-error {
+    background: rgba(184, 63, 63, 0.08) !important;
+    border-color: rgba(184, 63, 63, 0.16) !important;
+}
+
+.alert-success {
+    background: rgba(45, 122, 89, 0.08) !important;
+    border-color: rgba(45, 122, 89, 0.18) !important;
+}
+
+.forgot-link,
+.auth-footer a,
+.hint a {
+    color: #b67c3f !important;
+}
+
+.social-divider p {
+    color: #7b8792 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background:
+            radial-gradient(circle at top left, rgba(217, 161, 95, 0.12), transparent 34%),
+            radial-gradient(circle at right 20%, rgba(107, 164, 216, 0.16), transparent 32%),
+            linear-gradient(180deg, #09121c 0%, #0e1822 100%) !important;
+        color: #ecf0f4 !important;
+    }
+
+    .auth-card {
+        background: rgba(17, 31, 44, 0.94) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 26px 68px rgba(0, 0, 0, 0.34) !important;
+    }
+
+    .auth-header h2,
+    .auth-card > h2:first-of-type,
+    .input-group label,
+    form label {
+        color: #ecf0f4 !important;
+    }
+
+    .auth-header p,
+    .auth-footer,
+    .hint,
+    .login-meta {
+        color: #a4b2bf !important;
+    }
+
+    .input-with-icon,
+    form input:not([type="checkbox"]):not([type="radio"]) {
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ecf0f4 !important;
+    }
+
+    .input-with-icon input {
+        color: #ecf0f4 !important;
+    }
+
+    .btn-social {
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #ecf0f4 !important;
+    }
+}

@@ -118,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <!-- CSS riêng cho trang login -->
   <link rel="stylesheet" href="assets/css/login.css">
   <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/auth_shell.css">
 
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
