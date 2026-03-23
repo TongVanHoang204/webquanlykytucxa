@@ -414,7 +414,7 @@ function getTotalRooms($conn) {
 }
 
 function getAvailableRooms($conn) {
-    $result = $conn->query("SELECT COUNT(*) as total FROM Rooms WHERE Status = 'available'");
+    $result = $conn->query("SELECT COUNT(*) as total FROM Rooms WHERE Status = 'Trống'");
     return $result ? $result->fetch_assoc()['total'] : 0;
 }
 ?>
