@@ -53,6 +53,8 @@ $roomSql = "
         r.RoomNumber,
         r.Capacity,
         r.RoomPrice,
+        r.ElectricPrice,
+        r.WaterPrice,
         r.RoomType,
         r.Description      AS RoomDesc,
         r.Status           AS RoomStatus,
@@ -223,6 +225,16 @@ if ($isLoggedIn && $student) {
                     <i class="fas fa-money-bill-wave"></i>
                     Giá: <strong><?= number_format($room['RoomPrice'], 0, ',', '.') ?>₫ / tháng</strong>
                 </p>
+                <div class="utility-prices" style="display:flex; gap:18px; margin-top:4px; flex-wrap:wrap;">
+                    <p style="margin:0; color:#f59e0b; font-weight:600;">
+                        <i class="fas fa-bolt"></i>
+                        Điện: <?= number_format((float)($room['ElectricPrice'] ?? 3500), 0, ',', '.') ?>₫/kWh
+                    </p>
+                    <p style="margin:0; color:#3b82f6; font-weight:600;">
+                        <i class="fas fa-tint"></i>
+                        Nước: <?= number_format((float)($room['WaterPrice'] ?? 15000), 0, ',', '.') ?>₫/m³
+                    </p>
+                </div>
                 <p class="room-capacity">
                     <i class="fas fa-users"></i>
                     Sức chứa: <?= $capacity ?> | Đang ở: <?= $current ?> | Còn trống:

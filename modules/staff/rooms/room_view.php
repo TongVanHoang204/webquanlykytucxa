@@ -176,6 +176,18 @@ function getInitials($name)
                         </span> / tháng
                     </p>
 
+                    <p><strong><i class="fas fa-bolt" style="color: #f59e0b;"></i> Giá điện:</strong>
+                        <span style="font-weight: 600;">
+                            <?= number_format((float)($room['ElectricPrice'] ?? 3500), 0, ',', '.') ?>₫ / kWh
+                        </span>
+                    </p>
+
+                    <p><strong><i class="fas fa-tint" style="color: #3b82f6;"></i> Giá nước:</strong>
+                        <span style="font-weight: 600;">
+                            <?= number_format((float)($room['WaterPrice'] ?? 15000), 0, ',', '.') ?>₫ / m³
+                        </span>
+                    </p>
+
                     <p><strong><i class="fas fa-info-circle"></i> Trạng thái:</strong>
                         <span class="status-badge
                         <?= $displayStatus === 'Trống'

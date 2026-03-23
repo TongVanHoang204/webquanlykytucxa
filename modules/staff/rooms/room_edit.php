@@ -81,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $capacity = (int)($_POST['capacity'] ?? 4);
         $priceRaw = (string)($_POST['price'] ?? '0');
         $price    = (int)preg_replace('/\D+/', '', $priceRaw);
+        $electricPriceRaw = (string)($_POST['electric_price'] ?? '0');
+        $electricPrice = (float)preg_replace('/[^0-9.]/', '', str_replace(',', '.', $electricPriceRaw));
+        $waterPriceRaw = (string)($_POST['water_price'] ?? '0');
+        $waterPrice = (float)preg_replace('/[^0-9.]/', '', str_replace(',', '.', $waterPriceRaw));
         $status   = $_POST['status'] ?? 'Trống';
         $description = trim($_POST['description'] ?? '');
 
@@ -102,6 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = '⚠️ Sức chứa phải từ 1–8.';
         } elseif ($price <= 0) {
             $error = '⚠️ Giá phòng phải > 0.';
+        } elseif ($electricPrice < 0) {
+            $error = '⚠️ Giá điện không hợp lệ.';
+        } elseif ($waterPrice < 0) {
+            $error = '⚠️ Giá nước không hợp lệ.';
         } elseif (!in_array($status, ['Trống', 'Đầy', 'Bảo trì'], true)) {
             $error = '⚠️ Trạng thái chỉ được Trống / Đầy / Bảo trì.';
         }
@@ -137,17 +145,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($error === '') {
             $stmt = $conn->prepare("
                 UPDATE Rooms
-                SET RoomType=?, Capacity=?, RoomPrice=?, `Status`=?, ImagePath=?, Amenities=?, Description=?, UpdatedAt=NOW()
+                SET RoomType=?, Capacity=?, RoomPrice=?, ElectricPrice=?, WaterPrice=?, `Status`=?, ImagePath=?, Amenities=?, Description=?, UpdatedAt=NOW()
                 WHERE RoomID=?
             ");
             if (!$stmt) {
                 $error = '❌ Lỗi MySQL (prepare): ' . $conn->error;
             } else {
                 $stmt->bind_param(
-                    "siissssi",
+                    "siiddssssi",
                     $roomType,
                     $capacity,
                     $price,
+                    $electricPrice,
+                    $waterPrice,
                     $status,
                     $imagePath,
                     $amenitiesJson,
@@ -240,6 +250,16 @@ require_once '../../../includes/admin_header.php';
                     <div class="form-group">
                         <label><i class="fas fa-tag"></i> Giá phòng (VNĐ) *</label>
                         <input type="text" name="price" id="price" value="<?= htmlspecialchars(number_format((int)($_POST['price'] ?? $room['RoomPrice']), 0, ',', '.')) ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-bolt"></i> Giá điện (đ/kWh)</label>
+                        <input type="text" name="electric_price" id="electric_price" value="<?= htmlspecialchars(number_format((float)($_POST['electric_price'] ?? $room['ElectricPrice']), 0, ',', '.')) ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-tint"></i> Giá nước (đ/m³)</label>
+                        <input type="text" name="water_price" id="water_price" value="<?= htmlspecialchars(number_format((float)($_POST['water_price'] ?? $room['WaterPrice']), 0, ',', '.')) ?>">
                     </div>
 
                     <div class="form-group">
