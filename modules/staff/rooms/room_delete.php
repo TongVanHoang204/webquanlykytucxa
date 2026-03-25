@@ -62,8 +62,8 @@ try {
 
     $conn->query("DELETE FROM Contracts WHERE RoomID = $id");
 
-    if (!empty($room['ImagePath']) && file_exists('../../' . $room['ImagePath'])) {
-        unlink('../../' . $room['ImagePath']);
+    if (!empty($room['ImagePath']) && file_exists('../../../' . $room['ImagePath'])) {
+        unlink('../../../' . $room['ImagePath']);
     }
 
     $conn->query("DELETE FROM Rooms WHERE RoomID = $id");

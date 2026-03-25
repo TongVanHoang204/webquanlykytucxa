@@ -1,214 +1,236 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
-requireRole(['Admin']);
 require_once '../../../includes/log_helper.php';
 
-// Xử lý POST (validate, upload, insert, ghi log...)
+requireRole(['Admin']);
 
-
-// =============== CSRF token (tạo 1 lần và giữ nguyên tới khi submit thành công) ===============
 if (empty($_SESSION['_csrf'])) {
     $_SESSION['_csrf'] = bin2hex(random_bytes(32));
 }
 $csrf = $_SESSION['_csrf'];
 
-// =============== Config validate ===============
-$allowedAmenities = ['wifi', 'aircon', 'fridge', 'tv', 'bathroom', 'balcony'];
+$allowedAmenities = ['wifi', 'aircon', 'fridge', 'tv', 'bathroom', 'balcony', 'windown'];
 $allowedRoomTypes = ['Nam', 'Nữ', 'Khác'];
-$MAX_GALLERY = 10;
-$MAX_PRICE   = 20000000; // 20 triệu
+$maxGallery = 10;
+$maxPrice = 20000000;
+
 $errors = [];
-$error  = ''; // HTML error list sẽ gán sau
+$error = '';
 
-// =============== Xử lý POST ===============
+function uploadStrict(array $file, string $dir, string $prefix): array
+{
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return [null, 'Lỗi upload ảnh.'];
+    }
+
+    if (!in_array((string)($file['type'] ?? ''), $allowedTypes, true)) {
+        return [null, 'Ảnh không hợp lệ.'];
+    }
+
+    if ((int)($file['size'] ?? 0) > 5 * 1024 * 1024) {
+        return [null, 'Ảnh vượt quá 5MB.'];
+    }
+
+    if (!@getimagesize((string)$file['tmp_name'])) {
+        return [null, 'File tải lên không phải ảnh hợp lệ.'];
+    }
+
+    $extension = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+    $extension = $extension !== '' ? $extension : 'jpg';
+    $filename = $prefix . '_' . bin2hex(random_bytes(6)) . '.' . $extension;
+
+    if (!move_uploaded_file((string)$file['tmp_name'], $dir . $filename)) {
+        return [null, 'Không thể lưu ảnh.'];
+    }
+
+    return ['assets/img/rooms/' . $filename, null];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF: so sánh an toàn, không tạo token mới giữa chừng
-    $postedToken  = (string)($_POST['_csrf'] ?? '');
-    $sessionToken = (string)($csrf ?? '');
-    if ($postedToken === '' || $sessionToken === '' || !hash_equals($sessionToken, $postedToken)) {
-        $errors[] = "❌ Form không hợp lệ. Vui lòng tải lại trang.";
+    $postedToken = (string)($_POST['_csrf'] ?? '');
+    if ($postedToken === '' || !hash_equals($csrf, $postedToken)) {
+        $errors[] = 'Form không hợp lệ. Vui lòng tải lại trang.';
     }
 
-    // Lấy dữ liệu
-    $building   = trim($_POST['building'] ?? '');
-    $numberRaw  = trim($_POST['room_number'] ?? '');
-    $number     = strtoupper(preg_replace('/\s+/', '', $numberRaw));
-    $type       = $_POST['room_type'] ?? 'Nam';
-    $capacity   = (int)($_POST['capacity'] ?? 4);
-    // Parse giá an toàn: loại bỏ mọi ký tự không phải số
-    $price      = (int)preg_replace('/\D/', '', $_POST['price'] ?? '0');
-    $description = $_POST['description'] ?? '';
-    $amenities  = isset($_POST['amenities']) ? array_intersect((array)$_POST['amenities'], $allowedAmenities) : [];
+    $buildingId = (int)($_POST['building_id'] ?? 0);
+    $numberRaw = trim((string)($_POST['room_number'] ?? ''));
+    $number = strtoupper(preg_replace('/\s+/', '', $numberRaw) ?? '');
+    $type = (string)($_POST['room_type'] ?? 'Nam');
+    $capacity = (int)($_POST['capacity'] ?? 4);
+    $price = (int)preg_replace('/\D/', '', (string)($_POST['price'] ?? '0'));
+    $description = trim((string)($_POST['description'] ?? ''));
+    $amenities = array_values(array_intersect((array)($_POST['amenities'] ?? []), $allowedAmenities));
 
-    // Validate
-    if ($building === '') $errors[] = "⚠️ Vui lòng chọn tòa nhà.";
-    if ($number === '')   $errors[] = "⚠️ Vui lòng nhập số phòng.";
-
-    if ($number !== '' && !preg_match('/^[A-Z0-9\-]{1,10}$/', $number)) {
-        $errors[] = "⚠️ Số phòng chỉ cho phép A–Z, 0–9, dấu '-' và tối đa 10 ký tự.";
+    if ($buildingId <= 0) {
+        $errors[] = 'Vui lòng chọn tòa nhà.';
     }
-    if (!in_array($type, $allowedRoomTypes, true)) $errors[] = "⚠️ Loại phòng không hợp lệ.";
-    if ($capacity < 1 || $capacity > 8)           $errors[] = "⚠️ Sức chứa phải từ 1–8.";
-    if ($price <= 0 || $price > $MAX_PRICE)       $errors[] = "⚠️ Giá phòng phải > 0 và ≤ " . number_format($MAX_PRICE);
 
-    $amenitiesJson = !empty($amenities) ? json_encode($amenities, JSON_UNESCAPED_UNICODE) : null;
+    if ($number === '') {
+        $errors[] = 'Vui lòng nhập số phòng.';
+    } elseif (!preg_match('/^[A-Z0-9-]{1,10}$/', $number)) {
+        $errors[] = 'Số phòng chỉ cho phép A-Z, 0-9, dấu gạch ngang và tối đa 10 ký tự.';
+    }
 
-    // =============== Upload ảnh ===============
-    // Đường dẫn vật lý đúng từ modules/staff/rooms/ lên thư mục /assets/img/rooms/
-    $uploadDir = '../assets/img/rooms/';
+    if (!in_array($type, $allowedRoomTypes, true)) {
+        $errors[] = 'Loại phòng không hợp lệ.';
+    }
+
+    if ($capacity < 1 || $capacity > 8) {
+        $errors[] = 'Sức chứa phải trong khoảng 1 đến 8.';
+    }
+
+    if ($price <= 0 || $price > $maxPrice) {
+        $errors[] = 'Giá phòng phải lớn hơn 0 và không vượt quá ' . number_format($maxPrice, 0, ',', '.');
+    }
+
+    $buildingName = '';
+    if (!$errors) {
+        $buildingStmt = $conn->prepare('SELECT BuildingName FROM Buildings WHERE BuildingID = ? LIMIT 1');
+        $buildingStmt->bind_param('i', $buildingId);
+        $buildingStmt->execute();
+        $buildingStmt->bind_result($buildingName);
+        $buildingStmt->fetch();
+        $buildingStmt->close();
+
+        if ($buildingName === '') {
+            $errors[] = 'Không tìm thấy tòa nhà đã chọn.';
+        }
+    }
+
+    if (!$errors) {
+        $duplicateStmt = $conn->prepare('SELECT RoomID FROM Rooms WHERE BuildingID = ? AND RoomNumber = ? LIMIT 1');
+        $duplicateStmt->bind_param('is', $buildingId, $number);
+        $duplicateStmt->execute();
+        $duplicateStmt->store_result();
+        if ($duplicateStmt->num_rows > 0) {
+            $errors[] = "Phòng {$number} đã tồn tại trong tòa {$buildingName}.";
+        }
+        $duplicateStmt->close();
+    }
+
+    $uploadDir = '../../../assets/img/rooms/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
 
-    function uploadStrict($file, $dir, $prefix)
-    {
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) return [null, "Lỗi upload ảnh."];
-        if (!in_array($file['type'] ?? '', $allowed, true)) return [null, "Ảnh không hợp lệ!"];
-        if (($file['size'] ?? 0) > 5 * 1024 * 1024) return [null, "Ảnh quá 5MB!"];
-
-        $info = @getimagesize($file['tmp_name']);
-        if (!$info) return [null, "File không phải ảnh hợp lệ!"];
-
-        $ext = pathinfo($file['name'] ?? '', PATHINFO_EXTENSION);
-        $new = $prefix . "_" . bin2hex(random_bytes(6)) . "." . $ext;
-        if (!move_uploaded_file($file['tmp_name'], $dir . $new)) return [null, "Không thể lưu ảnh!"];
-
-        // Đường dẫn để lưu DB (tính từ web root)
-        return ['assets/img/rooms/' . $new, null];
-    }
-
     $mainImagePath = null;
-    $galleryPaths  = [];
+    $galleryPaths = [];
 
-    // Ảnh chính
-    if (!empty($_FILES['image']['name'] ?? '')) {
-        [$p, $e] = uploadStrict($_FILES['image'], $uploadDir, 'main');
-        if ($e) $errors[] = "Ảnh chính: $e";
-        else $mainImagePath = $p;
+    if (!empty($_FILES['image']['name'])) {
+        [$mainImagePath, $uploadError] = uploadStrict($_FILES['image'], $uploadDir, 'main');
+        if ($uploadError !== null) {
+            $errors[] = 'Ảnh chính: ' . $uploadError;
+        }
     }
 
-    // Gallery
-    $galleryCount = 0;
     if (!empty($_FILES['gallery']['name']) && is_array($_FILES['gallery']['name'])) {
-        foreach ($_FILES['gallery']['error'] as $k => $err) {
-            if ($err !== UPLOAD_ERR_NO_FILE) $galleryCount++;
+        $selectedFiles = 0;
+        foreach ((array)$_FILES['gallery']['error'] as $galleryError) {
+            if ((int)$galleryError !== UPLOAD_ERR_NO_FILE) {
+                $selectedFiles++;
+            }
         }
-        if ($galleryCount > $MAX_GALLERY) $errors[] = "⚠️ Tối đa $MAX_GALLERY ảnh gallery!";
 
-        if (empty($errors)) {
-            foreach ($_FILES['gallery']['tmp_name'] as $k => $tmp) {
-                if ($_FILES['gallery']['error'][$k] === UPLOAD_ERR_OK) {
-                    $file = [
-                        'name'     => $_FILES['gallery']['name'][$k],
-                        'type'     => $_FILES['gallery']['type'][$k] ?? '',
-                        'tmp_name' => $tmp,
-                        'error'    => $_FILES['gallery']['error'][$k],
-                        'size'     => $_FILES['gallery']['size'][$k] ?? 0,
-                    ];
-                    [$p, $e] = uploadStrict($file, $uploadDir, 'gallery');
-                    if ($e) {
-                        $errors[] = "Gallery: $e";
-                        break;
-                    }
-                    if ($p) $galleryPaths[] = $p;
+        if ($selectedFiles > $maxGallery) {
+            $errors[] = "Tối đa {$maxGallery} ảnh thư viện.";
+        }
+
+        if (!$errors) {
+            foreach ((array)$_FILES['gallery']['tmp_name'] as $index => $tmpName) {
+                if ((int)$_FILES['gallery']['error'][$index] !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $galleryFile = [
+                    'name' => $_FILES['gallery']['name'][$index] ?? '',
+                    'type' => $_FILES['gallery']['type'][$index] ?? '',
+                    'tmp_name' => $tmpName,
+                    'error' => $_FILES['gallery']['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+                    'size' => $_FILES['gallery']['size'][$index] ?? 0,
+                ];
+
+                [$path, $uploadError] = uploadStrict($galleryFile, $uploadDir, 'gallery');
+                if ($uploadError !== null) {
+                    $errors[] = 'Thư viện ảnh: ' . $uploadError;
+                    break;
+                }
+
+                if ($path !== null) {
+                    $galleryPaths[] = $path;
                 }
             }
         }
     }
 
-    // =============== DB ===============
-    if (empty($errors)) {
-        // Tìm BuildingID theo BuildingName (nếu form submit tên)
-        $buildingID = null;
-        $b = $conn->prepare("SELECT BuildingID FROM Buildings WHERE BuildingName = ? LIMIT 1");
-        $b->bind_param("s", $building);
-        $b->execute();
-        $b->bind_result($buildingID);
-        $b->fetch();
-        $b->close();
+    if (!$errors) {
+        $amenitiesJson = $amenities ? json_encode($amenities, JSON_UNESCAPED_UNICODE) : null;
+        $galleryJson = $galleryPaths ? json_encode($galleryPaths, JSON_UNESCAPED_UNICODE) : null;
 
-        if (empty($buildingID)) {
-            $errors[] = "❌ Không tìm thấy tòa $building.";
-        } else {
-            // Check duplicate
-            $c = $conn->prepare("SELECT RoomID FROM Rooms WHERE RoomNumber = ? AND BuildingID = ?");
-            $c->bind_param("si", $number, $buildingID);
-            $c->execute();
-            $c->store_result();
-            if ($c->num_rows > 0) $errors[] = "⚠️ Phòng $number đã tồn tại trong tòa $building!";
-            $c->close();
-        }
+        $insertStmt = $conn->prepare(
+            "INSERT INTO Rooms (
+                BuildingID, RoomNumber, RoomType, Capacity, RoomPrice, Status,
+                CurrentOccupants, ImagePath, Gallery, Description, Amenities
+            ) VALUES (?, ?, ?, ?, ?, 'Trống', 0, ?, ?, ?, ?)"
+        );
 
-        if (empty($errors)) {
-            $galleryJson = !empty($galleryPaths) ? json_encode($galleryPaths, JSON_UNESCAPED_UNICODE) : null;
+        $insertStmt->bind_param(
+            'issidssss',
+            $buildingId,
+            $number,
+            $type,
+            $capacity,
+            $price,
+            $mainImagePath,
+            $galleryJson,
+            $description,
+            $amenitiesJson
+        );
 
-            $stmt = $conn->prepare("
-                INSERT INTO Rooms (BuildingID, RoomNumber, RoomType, Capacity, RoomPrice, Status, CurrentOccupants, ImagePath, Gallery, Description, Amenities)
-                VALUES (?, ?, ?, ?, ?, 'Trống', 0, ?, ?, ?, ?)
-            ");
-            $stmt->bind_param(
-                "issidssss",
-                $buildingID,
-                $number,
-                $type,
-                $capacity,
-                $price,
-                $mainImagePath,
-                $galleryJson,
-                $description,
-                $amenitiesJson
+        if ($insertStmt->execute()) {
+            $newRoomId = (int)($insertStmt->insert_id ?: $conn->insert_id);
+            $insertStmt->close();
+
+            addLog(
+                $conn,
+                $_SESSION['UserID'] ?? null,
+                'Create room',
+                'Rooms',
+                "Thêm phòng mới ID={$newRoomId} - Số phòng: {$number} (form: {$numberRaw})",
+                'activity'
             );
 
-            if ($stmt->execute()) {
-                // Lấy ID phòng mới thêm để ghi log
-                $newRoomId = $stmt->insert_id ?: $conn->insert_id;
-
-                // Ghi log tạo phòng (nhớ đã include log_helper.php ở đâu đó)
-                addLog(
-                    $conn,
-                    $_SESSION['UserID'] ?? null,
-                    'Create room',
-                    'Rooms',
-                    "Thêm phòng mới ID={$newRoomId} - Số phòng: {$number} (form: {$numberRaw})",
-                    'activity'
-                );
-
-                // Dọn CSRF token để tránh double-submit
-                unset($_SESSION['_csrf']);
-                $_SESSION['message'] = "✅ Thêm phòng <b>{$numberRaw}</b> thành công!";
-                $_SESSION['message_type'] = "success";
-
-                // Không có output nào trước đó -> redirect an toàn
-                header("Location: rooms.php");
-                exit;
-            } else {
-                $errors[] = "❌ Lỗi MySQL: " . $stmt->error;
-            }
-            $stmt->close();
+            unset($_SESSION['_csrf']);
+            $_SESSION['message'] = "Thêm phòng <b>{$numberRaw}</b> thành công.";
+            $_SESSION['message_type'] = 'success';
+            header('Location: rooms.php');
+            exit;
         }
+
+        $errors[] = 'Lỗi MySQL: ' . $insertStmt->error;
+        $insertStmt->close();
     }
 
-    // Chuẩn bị HTML lỗi (nếu có) để hiển thị trong form
-    if (!empty($errors)) {
+    if ($errors) {
         $error = "<ul style='margin-left:15px;'>";
-        foreach ($errors as $e) $error .= "<li>{$e}</li>";
-        $error .= "</ul>";
+        foreach ($errors as $message) {
+            $error .= '<li>' . htmlspecialchars($message, ENT_QUOTES, 'UTF-8') . '</li>';
+        }
+        $error .= '</ul>';
     }
 }
 
-// =============== DỮ LIỆU DÙNG CHO FORM (GET hoặc có lỗi) ===============
-$buildings = $conn->query("SELECT BuildingName FROM Buildings ORDER BY BuildingName");
+$buildings = $conn->query('SELECT BuildingID, BuildingName FROM Buildings ORDER BY BuildingName');
 require_once '../../../includes/admin_header.php';
 ?>
-
-
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <title>Thêm Phòng Mới - Hệ Thống Ký Túc Xá</title>
@@ -216,16 +238,14 @@ require_once '../../../includes/admin_header.php';
     <link rel="stylesheet" href="../../../assets/css/staff/room/staff_room_add.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
     <div class="form-container">
-        <!-- Header -->
         <div class="form-header">
             <h2><i class="fas fa-plus-circle"></i> Thêm Phòng Mới</h2>
             <p class="subtitle">Thêm thông tin phòng mới vào hệ thống ký túc xá</p>
         </div>
 
-        <?php if (!empty($error)): ?>
+        <?php if ($error !== ''): ?>
             <div class="error">
                 <i class="fas fa-exclamation-triangle"></i>
                 <?= $error ?>
@@ -233,10 +253,9 @@ require_once '../../../includes/admin_header.php';
         <?php endif; ?>
 
         <form method="post" enctype="multipart/form-data" id="roomForm">
-            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
 
             <div class="form-grid">
-                <!-- Thông tin cơ bản -->
                 <div class="form-section">
                     <div class="section-header">
                         <i class="fas fa-info-circle"></i>
@@ -244,63 +263,48 @@ require_once '../../../includes/admin_header.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="building"><i class="fas fa-building"></i> Tòa nhà *</label>
-                        <select name="building" id="building" required>
+                        <label for="building_id"><i class="fas fa-building"></i> Tòa nhà *</label>
+                        <select name="building_id" id="building_id" required>
                             <option value=""> Chọn tòa nhà </option>
-                            <?php while ($b = $buildings->fetch_assoc()): ?>
-                                <option
-                                    value="<?= htmlspecialchars($b['BuildingName']) ?>"
-                                    <?= (($_POST['building'] ?? '') === $b['BuildingName']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($b['BuildingName']) ?>
-                                </option>
-                            <?php endwhile; ?>
+                            <?php if ($buildings instanceof mysqli_result): ?>
+                                <?php while ($building = $buildings->fetch_assoc()): ?>
+                                    <option
+                                        value="<?= (int)$building['BuildingID'] ?>"
+                                        <?= (int)($_POST['building_id'] ?? 0) === (int)$building['BuildingID'] ? 'selected' : '' ?>
+                                    >
+                                        <?= htmlspecialchars($building['BuildingName'], ENT_QUOTES, 'UTF-8') ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="room_number"><i class="fas fa-door-open"></i> Số phòng *</label>
-                        <input
-                            type="text"
-                            name="room_number"
-                            id="room_number"
-                            required
-                            placeholder="VD: 101, A201..."
-                            value="<?= htmlspecialchars($_POST['room_number'] ?? '') ?>">
+                        <input type="text" name="room_number" id="room_number" required placeholder="VD: 101, A201..." value="<?= htmlspecialchars((string)($_POST['room_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                     </div>
 
                     <div class="form-group">
                         <label for="room_type"><i class="fas fa-venus-mars"></i> Loại phòng *</label>
                         <select name="room_type" id="room_type" required>
-                            <option value="Nam" <?= (($_POST['room_type'] ?? '') === 'Nam')  ? 'selected' : '' ?>>Phòng Nam</option>
-                            <option value="Nữ" <?= (($_POST['room_type'] ?? '') === 'Nữ')   ? 'selected' : '' ?>>Phòng Nữ</option>
+                            <option value="Nam" <?= (($_POST['room_type'] ?? '') === 'Nam') ? 'selected' : '' ?>>Phòng Nam</option>
+                            <option value="Nữ" <?= (($_POST['room_type'] ?? '') === 'Nữ') ? 'selected' : '' ?>>Phòng Nữ</option>
                             <option value="Khác" <?= (($_POST['room_type'] ?? '') === 'Khác') ? 'selected' : '' ?>>Phòng Khác</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="capacity"><i class="fas fa-users"></i> Sức chứa *</label>
-                        <input
-                            type="number"
-                            name="capacity"
-                            id="capacity"
-                            min="1" max="8" required
-                            value="<?= htmlspecialchars($_POST['capacity'] ?? '4') ?>">
+                        <input type="number" name="capacity" id="capacity" min="1" max="8" required value="<?= htmlspecialchars((string)($_POST['capacity'] ?? '4'), ENT_QUOTES, 'UTF-8') ?>">
                         <small style="color: var(--gray); margin-top: 5px; display: block;">Số người tối đa có thể ở trong phòng</small>
                     </div>
 
                     <div class="form-group">
                         <label for="price"><i class="fas fa-tag"></i> Giá phòng (VNĐ) *</label>
-                        <input
-                            type="text"
-                            name="price"
-                            id="price"
-                            required
-                            placeholder="VD: 1.500.000"
-                            value="<?= htmlspecialchars($_POST['price'] ?? '') ?>">
+                        <input type="text" name="price" id="price" required placeholder="VD: 1.500.000" value="<?= htmlspecialchars((string)($_POST['price'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                     </div>
                 </div>
 
-                <!-- Hình ảnh & Mô tả -->
                 <div class="form-section">
                     <div class="section-header">
                         <i class="fas fa-images"></i>
@@ -335,57 +339,40 @@ require_once '../../../includes/admin_header.php';
 
                     <div class="form-group">
                         <label for="description"><i class="fas fa-file-alt"></i> Mô tả phòng</label>
-                        <textarea
-                            name="description"
-                            id="description"
-                            rows="4"
-                            placeholder="Mô tả chi tiết về phòng, tiện nghi, view..."><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+                        <textarea name="description" id="description" rows="4" placeholder="Mô tả chi tiết về phòng, tiện nghi, view..."><?= htmlspecialchars((string)($_POST['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
                     </div>
 
                     <div class="form-group">
                         <label><i class="fas fa-star"></i> Tiện nghi phòng</label>
                         <div class="features-grid">
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="wifi" id="wifi"
-                                    <?= in_array('wifi', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="wifi">WiFi</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="aircon" id="aircon"
-                                    <?= in_array('aircon', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="aircon">Máy lạnh</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="fridge" id="fridge"
-                                    <?= in_array('fridge', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="fridge">Tủ lạnh</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="tv" id="tv"
-                                    <?= in_array('tv', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="tv">TV</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="bathroom" id="bathroom"
-                                    <?= in_array('bathroom', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="bathroom">WC khép kín</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="balcony" id="balcony"
-                                    <?= in_array('balcony', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="balcony">Ban công</label>
-                            </div>
-                            <div class="feature-checkbox">
-                                <input type="checkbox" name="amenities[]" value="windown" id="windown"
-                                    <?= in_array('windown', $_POST['amenities'] ?? []) ? 'checked' : '' ?>>
-                                <label for="windown">Cửa sổ</label>
-                            </div>
+                            <?php foreach ($allowedAmenities as $amenity): ?>
+                                <?php
+                                $labels = [
+                                    'wifi' => 'WiFi',
+                                    'aircon' => 'Máy lạnh',
+                                    'fridge' => 'Tủ lạnh',
+                                    'tv' => 'TV',
+                                    'bathroom' => 'WC khép kín',
+                                    'balcony' => 'Ban công',
+                                    'windown' => 'Cửa sổ',
+                                ];
+                                ?>
+                                <div class="feature-checkbox">
+                                    <input
+                                        type="checkbox"
+                                        name="amenities[]"
+                                        value="<?= htmlspecialchars($amenity, ENT_QUOTES, 'UTF-8') ?>"
+                                        id="<?= htmlspecialchars($amenity, ENT_QUOTES, 'UTF-8') ?>"
+                                        <?= in_array($amenity, (array)($_POST['amenities'] ?? []), true) ? 'checked' : '' ?>
+                                    >
+                                    <label for="<?= htmlspecialchars($amenity, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($labels[$amenity], ENT_QUOTES, 'UTF-8') ?></label>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Form Actions -->
             <div class="form-actions">
                 <button type="submit" class="btn-submit" id="submitBtn">
                     <i class="fas fa-save"></i> Thêm Phòng
@@ -398,97 +385,72 @@ require_once '../../../includes/admin_header.php';
     </div>
 
     <script>
-        // Xem trước ảnh chính
-        function previewMainImage(event) {
-            const container = document.getElementById('mainPreviewGrid');
-            container.innerHTML = '';
-            const file = event.target.files[0];
-            if (file) {
-                if (validateImage(file)) {
-                    const previewItem = createPreviewItem(file, true);
-                    container.appendChild(previewItem);
-                } else {
-                    event.target.value = '';
-                    alert('Ảnh không hợp lệ! Vui lòng chọn ảnh JPEG, PNG, WEBP dưới 5MB.');
-                }
-            }
+        function validateImage(file) {
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            const maxSize = 5 * 1024 * 1024;
+            return allowedTypes.includes(file.type) && file.size <= maxSize;
         }
 
-        // Xem trước ảnh gallery
-        function previewGallery(event) {
-            const container = document.getElementById('galleryPreviewGrid');
-            const files = [...event.target.files];
-            container.innerHTML = '';
-            files.forEach(file => {
-                if (validateImage(file)) {
-                    const previewItem = createPreviewItem(file, false);
-                    container.appendChild(previewItem);
-                }
-            });
-        }
-
-        // Tạo preview item
-        function createPreviewItem(file, isMain) {
+        function createPreviewItem(file) {
             const previewItem = document.createElement('div');
             previewItem.className = 'preview-item';
 
             const img = document.createElement('img');
             img.src = URL.createObjectURL(file);
 
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'preview-remove';
-            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            removeBtn.onclick = function() {
-                previewItem.remove();
-                updateFileInput(isMain ? 'image' : 'gallery[]');
-            };
-
             previewItem.appendChild(img);
-            previewItem.appendChild(removeBtn);
             return previewItem;
         }
 
-        // Cập nhật file input sau khi xóa preview (tối giản cho demo)
-        function updateFileInput(inputName) {
-            console.log('Update file input for:', inputName);
+        function previewMainImage(event) {
+            const container = document.getElementById('mainPreviewGrid');
+            container.innerHTML = '';
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            if (!validateImage(file)) {
+                event.target.value = '';
+                alert('Ảnh không hợp lệ. Vui lòng chọn ảnh JPEG, PNG, WEBP hoặc GIF dưới 5MB.');
+                return;
+            }
+
+            container.appendChild(createPreviewItem(file));
         }
 
-        // Validate image
-        function validateImage(file) {
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (!allowedTypes.includes(file.type)) return false;
-            if (file.size > maxSize) return false;
-            return true;
+        function previewGallery(event) {
+            const container = document.getElementById('galleryPreviewGrid');
+            container.innerHTML = '';
+
+            [...event.target.files].forEach((file) => {
+                if (validateImage(file)) {
+                    container.appendChild(createPreviewItem(file));
+                }
+            });
         }
 
-        // Form validation + chống double click
-        document.getElementById('roomForm').addEventListener('submit', function(e) {
+        document.getElementById('roomForm').addEventListener('submit', function(event) {
             const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('loading');
-            submitBtn.innerHTML = '<i class="fas fa-spinner"></i> Đang xử lý...';
-
-            const building = document.getElementById('building').value.trim();
+            const building = document.getElementById('building_id').value.trim();
             const roomNumber = document.getElementById('room_number').value.trim();
             const price = document.getElementById('price').value.trim();
 
             if (!building || !roomNumber || !price) {
-                e.preventDefault();
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('loading');
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Thêm Phòng';
-                alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+                event.preventDefault();
+                alert('Vui lòng điền đầy đủ thông tin bắt buộc.');
+                return;
             }
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+            submitBtn.innerHTML = '<i class="fas fa-spinner"></i> Đang xử lý...';
         });
 
-        // Auto-format price (VN)
         document.getElementById('price').addEventListener('input', function() {
             const digits = this.value.replace(/\D/g, '');
-            if (digits) this.value = parseInt(digits).toLocaleString('vi-VN');
-            else this.value = '';
+            this.value = digits ? parseInt(digits, 10).toLocaleString('vi-VN') : '';
         });
     </script>
 </body>
-
 </html>
