@@ -55,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $startDate = trim((string)($_POST['start_date'] ?? ''));
     $endDate = trim((string)($_POST['end_date'] ?? ''));
 
+    if (($room['Status'] ?? '') === 'Báº£o trÃ¬') {
+        $_SESSION['message'] = 'PhÃ²ng Ä‘ang báº£o trÃ¬, khÃ´ng thá»ƒ thÃªm sinh viÃªn.';
+        $_SESSION['message_type'] = 'warning';
+        header("Location: room_view.php?id={$roomId}");
+        exit;
+    }
+
     if ($studentId <= 0 || $startDate === '' || $endDate === '') {
         $_SESSION['message'] = 'Vui lòng nhập đầy đủ thông tin hợp đồng.';
         $_SESSION['message_type'] = 'warning';

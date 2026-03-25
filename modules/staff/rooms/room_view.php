@@ -63,6 +63,7 @@ $capacity      = (int)$room['Capacity'];
 $occupantsLive = (int)$activeOccupants;
 $vacancyLive   = max(0, $capacity - $occupantsLive);
 $occupancyRate = $capacity > 0 ? ($occupantsLive / $capacity) * 100 : 0;
+$canAddStudent = $room['Status'] !== 'Báº£o trÃ¬' && $occupantsLive < $capacity;
 
 /* Trạng thái hiển thị (không ghi DB nếu Bảo trì) */
 $displayStatus = ($room['Status'] === 'Bảo trì')
@@ -410,6 +411,26 @@ function getInitials($name)
             document.getElementById('imageModal').addEventListener('click', e => {
                 if (e.target === e.currentTarget) closeImageModal();
             });
+
+            <?php if (!$canAddStudent): ?>
+            const addStudentButton = document.querySelector('a[href="room_add_student.php?room=<?= $id ?>"]');
+            if (addStudentButton) {
+                addStudentButton.style.display = 'none';
+            }
+            <?php endif; ?>
+
+            const addStudentButtonByState = document.querySelector('a[href="room_add_student.php?room=<?= $id ?>"]');
+            const statusBadge = document.querySelector('.room-info .status-badge');
+            const usageText = document.querySelector('.progress-info span:last-child');
+            if (addStudentButtonByState) {
+                const statusText = (statusBadge?.textContent || '').toLowerCase();
+                const usageMatch = (usageText?.textContent || '').match(/(\d+)\s*\/\s*(\d+)/);
+                const isMaintenance = /b.*tr/i.test(statusText);
+                const isFull = usageMatch ? Number(usageMatch[1]) >= Number(usageMatch[2]) : false;
+                if (isMaintenance || isFull) {
+                    addStudentButtonByState.style.display = 'none';
+                }
+            }
         </script>
 </body>
 
