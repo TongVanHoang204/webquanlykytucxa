@@ -69,22 +69,26 @@ $baseSubquery = "
     ) ac ON ac.RoomID = r.RoomID
 ";
 
-$sql = "SELECT * FROM ({$baseSubquery}) t WHERE 1=1";
+$filterClauses = [];
 if ($buildingId > 0) {
-    $sql .= ' AND t.BuildingID = ' . $buildingId;
+    $filterClauses[] = 't.BuildingID = ' . $buildingId;
 }
 if ($type !== 'all') {
     $safeType = $conn->real_escape_string($type);
-    $sql .= " AND t.RoomType = '{$safeType}'";
+    $filterClauses[] = "t.RoomType = '{$safeType}'";
 }
 if ($status !== 'all') {
     $safeStatus = $conn->real_escape_string($status);
-    $sql .= " AND t.EffectiveStatus = '{$safeStatus}'";
+    $filterClauses[] = "t.EffectiveStatus = '{$safeStatus}'";
 }
 if ($keyword !== '') {
     $safeKeyword = $conn->real_escape_string($keyword);
-    $sql .= " AND (t.RoomNumber LIKE '%{$safeKeyword}%' OR t.BuildingName LIKE '%{$safeKeyword}%')";
+    $filterClauses[] = "(t.RoomNumber LIKE '%{$safeKeyword}%' OR t.BuildingName LIKE '%{$safeKeyword}%')";
 }
+
+$filterSql = $filterClauses ? ' WHERE ' . implode(' AND ', $filterClauses) : '';
+
+$sql = "SELECT * FROM ({$baseSubquery}) t{$filterSql}";
 $sql .= ' ORDER BY t.BuildingName ASC, t.RoomNumber ASC';
 
 $result = $conn->query($sql);
@@ -95,7 +99,7 @@ $statsSql = "
         SUM(CASE WHEN EffectiveStatus = 'Trống' THEN 1 ELSE 0 END) AS available,
         SUM(CASE WHEN EffectiveStatus = 'Đầy' THEN 1 ELSE 0 END) AS occupied,
         SUM(CASE WHEN EffectiveStatus = 'Bảo trì' THEN 1 ELSE 0 END) AS maintenance
-    FROM ({$baseSubquery}) s
+    FROM ({$baseSubquery}) t{$filterSql}
 ";
 $statsRes = $conn->query($statsSql);
 $stats = $statsRes ? $statsRes->fetch_assoc() : [
