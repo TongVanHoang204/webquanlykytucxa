@@ -46,6 +46,16 @@ function logRoomAction(mysqli $conn, ?int $userID, string $verb, string $descrip
     addLog($conn, $userID, 'room.' . $verb, 'Rooms', $description, $type);
 }
 
+function logContractAction(mysqli $conn, ?int $userID, string $verb, string $description, string $type = 'activity'): void
+{
+    addLog($conn, $userID, 'contract.' . $verb, 'Contracts', $description, $type);
+}
+
+function logStudentAction(mysqli $conn, ?int $userID, string $verb, string $description, string $type = 'activity'): void
+{
+    addLog($conn, $userID, 'student.' . $verb, 'Students', $description, $type);
+}
+
 
 /**
  * GỬI THÔNG BÁO CHO NGƯỜI DÙNG

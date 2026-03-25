@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 requireRole(['Admin']); // Chỉ Admin/Manager
 
 /* ============== Helpers ============== */
@@ -123,6 +124,13 @@ try {
     $u->close();
 
     $conn->commit();
+    logContractAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        $hardDelete === 1 ? 'delete' : 'cancel',
+        ($hardDelete === 1 ? 'Xóa cứng' : 'Hủy') . " hợp đồng #{$contractID} của phòng #{$roomID}",
+        'activity'
+    );
 
     json_exit(200, [
         'ok'          => true,
@@ -135,5 +143,12 @@ try {
     ]);
 } catch (Throwable $e) {
     $conn->rollback();
+    logContractAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        $hardDelete === 1 ? 'delete_failed' : 'cancel_failed',
+        "Xử lý xóa/hủy hợp đồng #{$contractID} thất bại: " . $e->getMessage(),
+        'warning'
+    );
     throw $e; // sẽ được handler trả JSON 500
 }

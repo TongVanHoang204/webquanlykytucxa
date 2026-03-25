@@ -6,6 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../../../db_connect.php';
 require_once '../../../includes/SimpleXLSX.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 require_once __DIR__ . '/student_import_helpers.php';
 
 requireRole(['Admin', 'Manager']);
@@ -109,9 +110,23 @@ try {
     }
 
     $conn->commit();
+    logStudentAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        'import',
+        "Import sinh viên: thành công {$successCount}, lỗi {$failCount}, file {$fileName}",
+        'activity'
+    );
     @unlink($filePath);
 } catch (Throwable $throwable) {
     $conn->rollback();
+    logStudentAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        'import_failed',
+        "Import sinh viên thất bại từ file {$fileName}: " . $throwable->getMessage(),
+        'warning'
+    );
     @unlink($filePath);
     header('Location: student_import.php?error=SystemError');
     exit;

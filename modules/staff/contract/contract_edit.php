@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 requireRole(['Admin']);
 
 /* ================== HÀM DÙNG CHUNG ================== */
@@ -249,6 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 syncStudentDormStatus($conn, $studentId);
 
                 $conn->commit();
+                logContractAction(
+                    $conn,
+                    $_SESSION['UserID'] ?? null,
+                    'update',
+                    "Cáº­p nháº­t há»£p Ä‘á»“ng #{$contractId} cho StudentID={$studentId}, RoomID={$newRoomId}",
+                    'activity'
+                );
 
                 unset($_SESSION['_csrf']);
                 $_SESSION['message'] = '✅ Cập nhật hợp đồng thành công!';
