@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 
 // Chỉ Admin & Manager được truy cập
 requireRole(['Admin']);
@@ -81,6 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $newId = $stmt->insert_id;
+            addLog(
+                $conn,
+                $_SESSION['UserID'] ?? null,
+                'Create building',
+                'Buildings',
+                "Tạo tòa nhà ID={$newId} - Tên: {$old['BuildingName']}",
+                'activity'
+            );
             $okMsg = "Tạo tòa nhà thành công (ID #{$newId}).";
             // Xóa giá trị cũ sau khi thành công
             $old = ['BuildingName' => '', 'Description' => '', 'Floors' => ''];

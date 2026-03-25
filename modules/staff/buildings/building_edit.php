@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 
 requireRole(['Admin']);
 
@@ -92,6 +93,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($updateStmt->execute()) {
             $updateStmt->close();
+            addLog(
+                $conn,
+                $_SESSION['UserID'] ?? null,
+                'Update building',
+                'Buildings',
+                "Cập nhật tòa nhà ID={$buildingId} - Tên mới: {$old['BuildingName']}",
+                'history'
+            );
             redirectToList('Cập nhật thông tin tòa nhà thành công.', 'success');
         }
 
