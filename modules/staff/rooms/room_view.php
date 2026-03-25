@@ -369,6 +369,9 @@ function getInitials($name)
 
         <!-- Nút hành động -->
         <div class="action-buttons">
+            <a href="room_add_student.php?room=<?= $id ?>" class="btn btn-add">
+                <i class="fas fa-user-plus"></i> ThÃªm sinh viÃªn
+            </a>
             <a href="room_edit.php?id=<?= $id ?>" class="btn btn-add">
                 <i class="fas fa-edit"></i> Chỉnh sửa phòng
             </a>

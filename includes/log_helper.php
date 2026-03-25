@@ -36,6 +36,16 @@ function addLog(mysqli $conn, ?int $userID, string $action, string $module, stri
     $stmt->close();
 }
 
+function logBuildingAction(mysqli $conn, ?int $userID, string $verb, string $description, string $type = 'activity'): void
+{
+    addLog($conn, $userID, 'building.' . $verb, 'Buildings', $description, $type);
+}
+
+function logRoomAction(mysqli $conn, ?int $userID, string $verb, string $description, string $type = 'activity'): void
+{
+    addLog($conn, $userID, 'room.' . $verb, 'Rooms', $description, $type);
+}
+
 
 /**
  * GỬI THÔNG BÁO CHO NGƯỜI DÙNG
