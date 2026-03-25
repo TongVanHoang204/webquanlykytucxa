@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 require_once '../../../includes/SimpleXLSXGen.php';
 
@@ -12,28 +13,28 @@ function buildImportFixSuggestion(string $reasons): string
 {
     $suggestions = [];
 
-    if (stripos($reasons, 'Thiáº¿u MSSV') !== false || stripos($reasons, 'Thiếu MSSV') !== false) {
+    if (stripos($reasons, 'Thiếu MSSV') !== false) {
         $suggestions[] = 'Bổ sung MSSV và đảm bảo duy nhất.';
     }
-    if (stripos($reasons, 'TrÃ¹ng MSSV') !== false || stripos($reasons, 'Trùng MSSV') !== false) {
+    if (stripos($reasons, 'Trùng MSSV') !== false) {
         $suggestions[] = 'Đổi MSSV khác chưa tồn tại trong file và hệ thống.';
     }
-    if (stripos($reasons, 'Há» tÃªn') !== false || stripos($reasons, 'Họ tên') !== false) {
+    if (stripos($reasons, 'Họ tên') !== false) {
         $suggestions[] = 'Điền đầy đủ họ tên sinh viên.';
     }
-    if (stripos($reasons, 'Giá»›i tÃ­nh') !== false || stripos($reasons, 'Giới tính') !== false) {
+    if (stripos($reasons, 'Giới tính') !== false) {
         $suggestions[] = 'Chỉ dùng Nam hoặc Nữ.';
     }
     if (stripos($reasons, 'Khoa') !== false) {
         $suggestions[] = 'Dùng đúng tên khoa hoặc mã khoa đang có trong hệ thống.';
     }
-    if (stripos($reasons, 'Lá»›p') !== false || stripos($reasons, 'Lớp') !== false) {
+    if (stripos($reasons, 'Lớp') !== false) {
         $suggestions[] = 'Bổ sung tên lớp.';
     }
-    if (stripos($reasons, 'KhÃ³a') !== false || stripos($reasons, 'Khóa') !== false) {
+    if (stripos($reasons, 'Khóa') !== false) {
         $suggestions[] = 'Nhập khóa dạng năm như 2022 hoặc niên khóa có chứa năm.';
     }
-    if (stripos($reasons, 'SÄT') !== false || stripos($reasons, 'SĐT') !== false) {
+    if (stripos($reasons, 'SĐT') !== false) {
         $suggestions[] = 'Kiểm tra số điện thoại 9-15 chữ số.';
     }
     if (stripos($reasons, 'Email') !== false) {
@@ -53,7 +54,7 @@ if (!is_array($errorRows) || $errorRows === []) {
     exit;
 }
 
-$data = [[
+$errorSheet = [[
     'Dòng Excel',
     'MSSV',
     'Họ tên',
@@ -70,7 +71,7 @@ $data = [[
 
 foreach ($errorRows as $row) {
     $reasons = (string)($row['Reasons'] ?? '');
-    $data[] = [
+    $errorSheet[] = [
         (string)($row['ExcelRow'] ?? ''),
         (string)($row['StudentCode'] ?? ''),
         (string)($row['FullName'] ?? ''),
@@ -86,8 +87,30 @@ foreach ($errorRows as $row) {
     ];
 }
 
+$facultySheet = [[
+    'FacultyID',
+    'Mã khoa',
+    'Tên khoa',
+]];
+
+$facultyResult = $conn->query("SELECT FacultyID, FacultyCode, FacultyName FROM Faculties ORDER BY FacultyName ASC");
+if ($facultyResult instanceof mysqli_result) {
+    while ($faculty = $facultyResult->fetch_assoc()) {
+        $facultySheet[] = [
+            (string)($faculty['FacultyID'] ?? ''),
+            (string)($faculty['FacultyCode'] ?? ''),
+            (string)($faculty['FacultyName'] ?? ''),
+        ];
+    }
+}
+
+if (count($facultySheet) === 1) {
+    $facultySheet[] = ['', '', 'Chưa có dữ liệu khoa trong hệ thống'];
+}
+
 $filenameSeed = pathinfo((string)($_SESSION['student_import_error_filename'] ?? 'loi_import'), PATHINFO_FILENAME);
 $filenameSeed = preg_replace('/[^A-Za-z0-9_-]+/', '_', $filenameSeed) ?: 'loi_import';
 
-$xlsx = Shuchkin\SimpleXLSXGen::fromArray($data);
+$xlsx = Shuchkin\SimpleXLSXGen::fromArray($errorSheet, 'Dong loi');
+$xlsx->addSheet($facultySheet, 'Danh muc khoa');
 $xlsx->downloadAs('Loi_Import_SinhVien_' . $filenameSeed . '.xlsx');
