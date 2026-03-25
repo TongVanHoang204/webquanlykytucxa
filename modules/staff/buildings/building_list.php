@@ -11,7 +11,8 @@ requireRole(['Admin', 'Manager']);
 $conn->set_charset('utf8mb4');
 
 $csrf = csrfToken();
-$canManageBuildings = currentRole() === 'Admin';
+$canEditBuildings = in_array(currentRole(), ['Admin', 'Manager'], true);
+$canDeleteBuildings = currentRole() === 'Admin';
 $search = trim($_GET['search'] ?? '');
 $view = ($_GET['view'] ?? 'table') === 'card' ? 'card' : 'table';
 
@@ -103,7 +104,7 @@ require_once '../../../includes/admin_header.php';
                     </button>
                 </div>
 
-                <?php if ($canManageBuildings): ?>
+                <?php if ($canEditBuildings): ?>
                     <a href="building_create.php" class="btn primary">
                         <i class="fa-solid fa-plus"></i> Thêm tòa nhà
                     </a>
@@ -178,7 +179,7 @@ require_once '../../../includes/admin_header.php';
                                         <i class="fa-solid fa-door-open"></i>
                                     </a>
 
-                                    <?php if ($canManageBuildings): ?>
+                                    <?php if ($canEditBuildings): ?>
                                         <a
                                             href="building_edit.php?id=<?= (int)$building['BuildingID'] ?>"
                                             class="action-btn edit"
@@ -186,6 +187,8 @@ require_once '../../../includes/admin_header.php';
                                         >
                                             <i class="fa-solid fa-pen"></i>
                                         </a>
+                                    <?php endif; ?>
+                                    <?php if ($canDeleteBuildings): ?>
                                         <button
                                             type="button"
                                             class="action-btn delete"
@@ -244,7 +247,7 @@ require_once '../../../includes/admin_header.php';
                     <div class="empty" style="grid-column: 1 / -1;">
                         <i class="fa-regular fa-building"></i>
                         <p>Không tìm thấy tòa nhà nào.</p>
-                        <?php if ($canManageBuildings): ?>
+                        <?php if ($canEditBuildings): ?>
                             <a href="building_create.php" class="btn primary">
                                 <i class="fa-solid fa-plus"></i> Thêm tòa nhà đầu tiên
                             </a>
@@ -337,7 +340,7 @@ require_once '../../../includes/admin_header.php';
                                                 <i class="fa-solid fa-door-open"></i>
                                             </a>
 
-                                            <?php if ($canManageBuildings): ?>
+                                            <?php if ($canEditBuildings): ?>
                                                 <a
                                                     href="building_edit.php?id=<?= (int)$building['BuildingID'] ?>"
                                                     class="action-btn edit"
@@ -345,6 +348,8 @@ require_once '../../../includes/admin_header.php';
                                                 >
                                                     <i class="fa-solid fa-pen"></i>
                                                 </a>
+                                            <?php endif; ?>
+                                            <?php if ($canDeleteBuildings): ?>
                                                 <button
                                                     type="button"
                                                     class="action-btn delete"
@@ -364,7 +369,7 @@ require_once '../../../includes/admin_header.php';
                     <div class="empty">
                         <i class="fa-regular fa-building"></i>
                         <p>Không tìm thấy tòa nhà nào.</p>
-                        <?php if ($canManageBuildings): ?>
+                        <?php if ($canEditBuildings): ?>
                             <a href="building_create.php" class="btn primary">
                                 <i class="fa-solid fa-plus"></i> Thêm tòa nhà đầu tiên
                             </a>

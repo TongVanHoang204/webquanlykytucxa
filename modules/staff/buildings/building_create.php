@@ -7,7 +7,7 @@ require_once '../../../includes/auth_check.php';
 require_once '../../../includes/log_helper.php';
 
 // Chỉ Admin & Manager được truy cập
-requireRole(['Admin']);
+requireRole(['Admin', 'Manager']);
 
 /* ===================== CSRF token ===================== */
 if (empty($_SESSION['_csrf'])) {

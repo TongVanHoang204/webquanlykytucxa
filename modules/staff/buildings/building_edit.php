@@ -7,7 +7,7 @@ require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 require_once '../../../includes/log_helper.php';
 
-requireRole(['Admin']);
+requireRole(['Admin', 'Manager']);
 
 $conn->set_charset('utf8mb4');
 

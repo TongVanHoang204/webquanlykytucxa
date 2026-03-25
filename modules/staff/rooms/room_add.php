@@ -7,7 +7,7 @@ require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 require_once '../../../includes/log_helper.php';
 
-requireRole(['Admin']);
+requireRole(['Admin', 'Manager']);
 
 if (empty($_SESSION['_csrf'])) {
     $_SESSION['_csrf'] = bin2hex(random_bytes(32));

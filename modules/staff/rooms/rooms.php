@@ -9,7 +9,8 @@ require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
 $csrf = csrfToken();
-$canManageRooms = currentRole() === 'Admin';
+$canEditRooms = in_array(currentRole(), ['Admin', 'Manager'], true);
+$canDeleteRooms = currentRole() === 'Admin';
 $status = trim($_GET['status'] ?? 'all');
 $type = trim($_GET['type'] ?? 'all');
 $keyword = trim($_GET['search'] ?? '');
@@ -134,7 +135,7 @@ require_once '../../../includes/admin_header.php';
                 <input type="text" name="search" placeholder="Tìm theo số phòng hoặc tòa..." value="<?= e($keyword) ?>">
                 <button type="submit"><i class="fas fa-search"></i></button>
             </form>
-            <?php if ($canManageRooms): ?>
+            <?php if ($canEditRooms): ?>
                 <a href="room_add.php" class="btn-add"><i class="fas fa-plus-circle"></i> Thêm phòng mới</a>
             <?php endif; ?>
         </div>
@@ -260,7 +261,7 @@ require_once '../../../includes/admin_header.php';
                                 </td>
                                 <td class="actions">
                                     <a href="room_view.php?id=<?= (int)$room['RoomID'] ?>" class="btn-view" title="Xem chi tiết"><i class="fas fa-eye"></i></a>
-                                    <?php if ($canManageRooms): ?>
+                                    <?php if ($canEditRooms): ?>
                                         <a href="room_edit.php?id=<?= (int)$room['RoomID'] ?>" class="btn-edit" title="Chỉnh sửa"><i class="fas fa-edit"></i></a>
                                         <a
                                             href="#"
