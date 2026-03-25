@@ -423,6 +423,7 @@ function getInitials($name)
             const statusBadge = document.querySelector('.room-info .status-badge');
             const usageText = document.querySelector('.progress-info span:last-child');
             if (addStudentButtonByState) {
+                addStudentButtonByState.innerHTML = '<i class="fas fa-user-plus"></i> Thêm sinh viên';
                 const statusText = (statusBadge?.textContent || '').toLowerCase();
                 const usageMatch = (usageText?.textContent || '').match(/(\d+)\s*\/\s*(\d+)/);
                 const isMaintenance = /b.*tr/i.test(statusText);
