@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             <h4><i class="fa-solid fa-circle-info"></i> Quy tắc import</h4>
             <p>
                 Hệ thống hỗ trợ đúng bộ cột chuẩn:
-                <strong>MSSV | Họ tên | Giới tính | Tên Khoa | Lớp | Khóa | SĐT | Email | Địa chỉ</strong>.
+                <strong>MSSV | Họ tên | Giới tính | Tên khoa | Lớp | Khóa | SĐT | Email | Địa chỉ</strong>.
             </p>
             <ul>
                 <li>Có thể có hàng tiêu đề và hỗ trợ thêm cột <strong>STT</strong> ở đầu file.</li>
@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
 
                 <?php if (!empty($errorRows)): ?>
                     <a href="download_import_errors.php" class="btn btn-secondary">
-                        <i class="fa-solid fa-file-arrow-down"></i> Táº£i file dÃ²ng lá»—i
+                        <i class="fa-solid fa-file-arrow-down"></i> Tải file dòng lỗi
                     </a>
                 <?php endif; ?>
 
