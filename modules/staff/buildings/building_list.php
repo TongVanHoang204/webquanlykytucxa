@@ -193,7 +193,7 @@ require_once '../../../includes/admin_header.php';
                                             type="button"
                                             class="action-btn delete"
                                             title="Xóa tòa nhà"
-                                            onclick="deleteBuilding(<?= (int)$building['BuildingID'] ?>, <?= e(json_encode($building['BuildingName'], JSON_UNESCAPED_UNICODE)) ?>)"
+                                            onclick="deleteBuildingSecure(<?= (int)$building['BuildingID'] ?>, <?= e(json_encode($building['BuildingName'], JSON_UNESCAPED_UNICODE)) ?>)"
                                         >
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
@@ -354,7 +354,7 @@ require_once '../../../includes/admin_header.php';
                                                     type="button"
                                                     class="action-btn delete"
                                                     title="Xóa tòa nhà"
-                                                    onclick="deleteBuilding(<?= (int)$building['BuildingID'] ?>, <?= e(json_encode($building['BuildingName'], JSON_UNESCAPED_UNICODE)) ?>)"
+                                                    onclick="deleteBuildingSecure(<?= (int)$building['BuildingID'] ?>, <?= e(json_encode($building['BuildingName'], JSON_UNESCAPED_UNICODE)) ?>)"
                                                 >
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
@@ -435,6 +435,67 @@ require_once '../../../includes/admin_header.php';
                     })
                     .catch(() => {
                         Swal.fire('Lỗi', 'Không thể kết nối máy chủ.', 'error');
+                    });
+            });
+        }
+
+        function deleteBuildingSecure(id, name) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            Swal.fire({
+                title: 'XÃ³a tÃ²a nhÃ ?',
+                html: `Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a <b>${name}</b>?<br><small class="text-muted">Nháº­p Ä‘Ãºng tÃªn tÃ²a nhÃ  Ä‘á»ƒ xÃ¡c nháº­n.</small>`,
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Nháº­p láº¡i tÃªn tÃ²a nhÃ ',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fa-solid fa-trash"></i> XÃ³a',
+                cancelButtonText: 'Há»§y',
+                reverseButtons: true,
+                preConfirm: (value) => {
+                    if ((value || '').trim().toLowerCase() !== String(name).trim().toLowerCase()) {
+                        Swal.showValidationMessage('TÃªn xÃ¡c nháº­n khÃ´ng khá»›p.');
+                    }
+                    return value;
+                }
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                fetch('building_delete_api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        id,
+                        confirm_name: result.value || '',
+                        _csrf: csrfToken
+                    })
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'ÄÃ£ xÃ³a',
+                                text: data.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            });
+                            setTimeout(() => window.location.reload(), 900);
+                            return;
+                        }
+
+                        Swal.fire('Lá»—i', data.message || 'KhÃ´ng thá»ƒ xÃ³a tÃ²a nhÃ .', 'error');
+                    })
+                    .catch(() => {
+                        Swal.fire('Lá»—i', 'KhÃ´ng thá»ƒ káº¿t ná»‘i mÃ¡y chá»§.', 'error');
                     });
             });
         }

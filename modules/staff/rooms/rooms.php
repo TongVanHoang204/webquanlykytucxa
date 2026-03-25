@@ -269,7 +269,7 @@ require_once '../../../includes/admin_header.php';
                                             data-id="<?= (int)$room['RoomID'] ?>"
                                             data-room="<?= e($room['RoomNumber']) ?>"
                                             title="Xóa phòng"
-                                            onclick="return confirmDelete(event, this)"
+                                            onclick="return confirmDeleteStrict(event, this)"
                                         >
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
@@ -320,6 +320,64 @@ require_once '../../../includes/admin_header.php';
                 idInput.name = 'id';
                 idInput.value = roomId || '';
                 form.appendChild(idInput);
+
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_csrf';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            });
+
+            return false;
+        }
+
+        function confirmDeleteStrict(event, element) {
+            event.preventDefault();
+
+            const roomId = element.getAttribute('data-id');
+            const roomNumber = element.getAttribute('data-room');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            Swal.fire({
+                title: 'XÃ¡c nháº­n xÃ³a',
+                html: `Nháº­p láº¡i sá»‘ phÃ²ng <b>${roomNumber}</b> Ä‘á»ƒ xÃ¡c nháº­n xÃ³a.`,
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Nháº­p láº¡i sá»‘ phÃ²ng',
+                showCancelButton: true,
+                confirmButtonText: 'XÃ³a',
+                cancelButtonText: 'Há»§y',
+                confirmButtonColor: '#f72585',
+                cancelButtonColor: '#6c757d',
+                preConfirm: (value) => {
+                    if ((value || '').trim().toLowerCase() !== String(roomNumber).trim().toLowerCase()) {
+                        Swal.showValidationMessage('Sá»‘ phÃ²ng xÃ¡c nháº­n khÃ´ng khá»›p.');
+                    }
+                    return value;
+                }
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'room_delete.php';
+
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = roomId || '';
+                form.appendChild(idInput);
+
+                const confirmInput = document.createElement('input');
+                confirmInput.type = 'hidden';
+                confirmInput.name = 'confirm_room';
+                confirmInput.value = result.value || '';
+                form.appendChild(confirmInput);
 
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
