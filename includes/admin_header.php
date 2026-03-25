@@ -108,6 +108,10 @@ if ($userAvatar && !empty($userAvatar)) {
                 <i class="fas fa-user-graduate"></i> Sinh viên
             </a>
 
+            <a href="<?= $base ?>modules/staff/payments/payment_list.php">
+                <i class="fas fa-money-check-alt"></i> Thanh toán
+            </a>
+
             <a href="<?= $base ?>index.php">
                 <i class="fas fa-house-user"></i> Trang chủ User
             </a>
@@ -158,6 +162,11 @@ if ($userAvatar && !empty($userAvatar)) {
                 <a href="<?= $base ?>modules/staff/students/student_list.php" data-path="modules/staff/students/student_list.php">
                      <i class="fas fa-user-graduate"></i>
                      <span>Sinh viên</span>
+                </a>
+
+                <a href="<?= $base ?>modules/staff/payments/payment_list.php" data-path="modules/staff/payments/payment_list.php">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span>Thanh toán</span>
                 </a>
 
                 <a href="<?= $base ?>index.php" data-path="index.php">

@@ -1,6 +1,6 @@
 <?php
 // ==============================
-// 💰 THANH TOÁN HÓA ĐƠN
+// 💰 THANH TOÁN HÓA ĐƠN (Gửi yêu cầu → Admin xác nhận)
 // ==============================
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -10,6 +10,21 @@ require_once '../../../includes/auth_check.php';
 requireRole(['Student']);
 
 $conn->set_charset('utf8mb4');
+
+// === Auto-migration: đảm bảo cột InvoiceID và Note trong payments ===
+try {
+    $check = $conn->query("SHOW COLUMNS FROM payments LIKE 'InvoiceID'");
+    if ($check && $check->num_rows === 0) {
+        $conn->query("ALTER TABLE payments ADD COLUMN InvoiceID INT NULL AFTER PaymentID");
+        $conn->query("ALTER TABLE payments ADD CONSTRAINT fk_payments_invoice FOREIGN KEY (InvoiceID) REFERENCES invoices(InvoiceID)");
+    }
+    $check2 = $conn->query("SHOW COLUMNS FROM payments LIKE 'Note'");
+    if ($check2 && $check2->num_rows === 0) {
+        $conn->query("ALTER TABLE payments ADD COLUMN Note TEXT NULL AFTER TransactionCode");
+    }
+} catch (Exception $e) {
+    // Silent - columns may already exist
+}
 
 $userID = (int)$_SESSION['UserID'];
 $invoiceID = (int)($_GET['id'] ?? 0);
@@ -23,12 +38,22 @@ if ($invoiceID <= 0) {
     exit;
 }
 
-if (!in_array($paymentMethod, ['vnpay', 'momo', 'transfer'])) {
+if (!in_array($paymentMethod, ['vnpay', 'momo', 'transfer', 'bank', 'cash'])) {
     $_SESSION['message'] = 'Phương thức thanh toán không hợp lệ!';
     $_SESSION['message_type'] = 'error';
     header('Location: bills.php');
     exit;
 }
+
+// Map payment method
+$methodMap = [
+    'vnpay' => 'Chuyển khoản',
+    'momo' => 'Chuyển khoản',
+    'transfer' => 'Chuyển khoản',
+    'bank' => 'Chuyển khoản',
+    'cash' => 'Tiền mặt'
+];
+$dbMethod = $methodMap[$paymentMethod] ?? 'Chuyển khoản';
 
 // Lấy thông tin sinh viên
 $studentQuery = $conn->prepare("SELECT StudentID, FullName, StudentCode FROM Students WHERE UserID = ?");
@@ -54,7 +79,7 @@ $sql = "
         i.RoomFee, i.ElectricUsage, i.ElectricPrice,
         i.WaterUsage, i.WaterPrice, i.TotalAmount,
         i.Status, i.CreatedAt, i.DueDate,
-        r.RoomNumber, b.BuildingName,
+        r.RoomID, r.RoomNumber, b.BuildingName,
         c.ContractID, c.StudentID
     FROM Invoices i
     INNER JOIN Contracts c ON i.ContractID = c.ContractID
@@ -87,46 +112,69 @@ if ($invoice['Status'] === 'Đã thanh toán') {
     exit;
 }
 
-// Xử lý thanh toán khi nhận callback
+// Kiểm tra đã có thanh toán đang chờ xác nhận chưa
+$checkPending = $conn->prepare("SELECT PaymentID FROM payments WHERE InvoiceID = ? AND Status = 'Chờ xác nhận' LIMIT 1");
+$checkPending->bind_param('i', $invoiceID);
+$checkPending->execute();
+$pendingResult = $checkPending->get_result();
+$hasPending = $pendingResult->num_rows > 0;
+$checkPending->close();
+
+// Xử lý khi user xác nhận đã thanh toán
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
+    if ($hasPending) {
+        $_SESSION['message'] = 'Hóa đơn này đã có yêu cầu thanh toán đang chờ xác nhận!';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: bills.php');
+        exit;
+    }
+
     try {
         $conn->begin_transaction();
-        
-        // Kiểm tra xem bảng Invoices có cột PaymentDate và PaymentMethod chưa
-        $checkColumns = $conn->query("SHOW COLUMNS FROM Invoices LIKE 'PaymentDate'");
-        if ($checkColumns->num_rows === 0) {
-            // Thêm cột PaymentDate và PaymentMethod nếu chưa có
-            $conn->query("ALTER TABLE Invoices ADD COLUMN PaymentDate DATETIME NULL AFTER Status");
-            $conn->query("ALTER TABLE Invoices ADD COLUMN PaymentMethod VARCHAR(50) NULL AFTER PaymentDate");
-        }
-        
-        // Cập nhật trạng thái hóa đơn với phương thức thanh toán
-        $updateStmt = $conn->prepare("
-            UPDATE Invoices 
-            SET Status = 'Đã thanh toán',
-                PaymentDate = NOW(),
-                PaymentMethod = ?,
-                UpdatedAt = NOW()
-            WHERE InvoiceID = ? AND Status = 'Chưa thanh toán'
+
+        // Tạo mã giao dịch
+        $transactionCode = 'TXN' . date('YmdHis') . rand(1000, 9999);
+
+        // 1. Tạo bản ghi Payment (Chờ xác nhận)
+        $insertPayment = $conn->prepare("
+            INSERT INTO payments (InvoiceID, StudentID, RoomID, Amount, Method, Status, TransactionCode, CreatedAt)
+            VALUES (?, ?, ?, ?, ?, 'Chờ xác nhận', ?, NOW())
         ");
-        $updateStmt->bind_param('si', $paymentMethod, $invoiceID);
-        $updateStmt->execute();
-        
-        if ($updateStmt->affected_rows > 0) {
-            $conn->commit();
-            $_SESSION['message'] = 'Thanh toán thành công! Hóa đơn đã được cập nhật.';
-            $_SESSION['message_type'] = 'success';
-        } else {
-            throw new Exception('Không thể cập nhật trạng thái hóa đơn. Hóa đơn có thể đã được thanh toán.');
-        }
-        
-        $updateStmt->close();
+        $insertPayment->bind_param('iiidss', 
+            $invoiceID, 
+            $studentID, 
+            $invoice['RoomID'], 
+            $invoice['TotalAmount'], 
+            $dbMethod, 
+            $transactionCode
+        );
+        $insertPayment->execute();
+        $insertPayment->close();
+
+        // 2. Gửi thông báo cho Admin qua adminnotifications
+        $notiTitle = "Yêu cầu xác nhận thanh toán mới";
+        $notiMessage = "Sinh viên <strong>" . $conn->real_escape_string($student['FullName']) . "</strong> (" . $conn->real_escape_string($student['StudentCode']) . ") "
+            . "đã gửi yêu cầu xác nhận thanh toán hóa đơn phòng <strong>" . $conn->real_escape_string($invoice['RoomNumber']) . "</strong> "
+            . "tháng <strong>" . $invoice['Month'] . "/" . $invoice['Year'] . "</strong>.<br>"
+            . "Số tiền: <strong>" . number_format($invoice['TotalAmount'], 0, ',', '.') . " ₫</strong><br>"
+            . "Phương thức: <strong>" . htmlspecialchars($dbMethod) . "</strong><br>"
+            . "Mã giao dịch: <strong>" . $transactionCode . "</strong>";
+
+        $insertNoti = $conn->prepare("INSERT INTO adminnotifications (Title, Message, CreatedAt, IsRead) VALUES (?, ?, NOW(), 0)");
+        $insertNoti->bind_param('ss', $notiTitle, $notiMessage);
+        $insertNoti->execute();
+        $insertNoti->close();
+
+        $conn->commit();
+
+        $_SESSION['message'] = 'Yêu cầu thanh toán đã được gửi thành công! Vui lòng chờ Admin xác nhận.';
+        $_SESSION['message_type'] = 'success';
         header('Location: bill_detail.php?id=' . $invoiceID);
         exit;
-        
+
     } catch (Exception $e) {
         $conn->rollback();
-        $_SESSION['message'] = 'Lỗi khi xử lý thanh toán: ' . $e->getMessage();
+        $_SESSION['message'] = 'Lỗi khi gửi yêu cầu thanh toán: ' . $e->getMessage();
         $_SESSION['message_type'] = 'error';
     }
 }
@@ -139,7 +187,7 @@ function formatMoney($amount) {
 // Tạo nội dung chuyển khoản
 $transferContent = "KTXSV{$student['StudentCode']} T{$invoice['Month']}/{$invoice['Year']}";
 
-// Thông tin ngân hàng (có thể lấy từ config hoặc DB)
+// Thông tin ngân hàng
 $bankInfo = [
     'name' => 'Ngân hàng TMCP Ngoại Thương Việt Nam (Vietcombank)',
     'account_number' => '1234567890',
@@ -171,6 +219,17 @@ require_once '../../../includes/header.php';
             Tháng <?= $invoice['Month'] ?>/<?= $invoice['Year'] ?>
         </div>
     </div>
+
+    <?php if ($hasPending): ?>
+    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 20px; margin-bottom: 20px; text-align: center;">
+        <i class="fas fa-hourglass-half" style="font-size: 2rem; color: #856404; margin-bottom: 10px;"></i>
+        <h3 style="color: #856404; margin: 10px 0;">Đang chờ xác nhận</h3>
+        <p style="color: #856404;">Bạn đã gửi yêu cầu thanh toán cho hóa đơn này. Vui lòng chờ Admin xác nhận.</p>
+        <a href="bills.php" class="btn btn-secondary" style="margin-top: 10px; display: inline-block;">
+            <i class="fas fa-arrow-left"></i> Quay lại danh sách hóa đơn
+        </a>
+    </div>
+    <?php else: ?>
 
     <!-- Tóm tắt hóa đơn -->
     <div class="invoice-summary">
@@ -236,7 +295,6 @@ require_once '../../../includes/header.php';
                 </p>
                 
                 <div class="qr-code">
-                    <!-- Trong thực tế, đây sẽ là QR code thật từ VNPay API -->
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=<?= urlencode("VNPay|Amount:" . $invoice['TotalAmount'] . "|Content:" . $transferContent) ?>" 
                          alt="VNPay QR Code">
                 </div>
@@ -259,7 +317,6 @@ require_once '../../../includes/header.php';
                 </p>
                 
                 <div class="qr-code">
-                    <!-- Trong thực tế, đây sẽ là QR code thật từ MoMo API -->
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=<?= urlencode("MoMo|Amount:" . $invoice['TotalAmount'] . "|Content:" . $transferContent) ?>" 
                          alt="MoMo QR Code">
                 </div>
@@ -271,7 +328,7 @@ require_once '../../../includes/header.php';
                 </div>
             </div>
             
-        <?php else: // transfer ?>
+        <?php else: // transfer / bank / cash ?>
             <div class="method-badge">
                 <i class="fas fa-university"></i> Chuyển khoản ngân hàng
             </div>
@@ -326,30 +383,25 @@ require_once '../../../includes/header.php';
             <div class="transfer-note">
                 <strong><i class="fas fa-exclamation-triangle"></i> Lưu ý quan trọng:</strong>
                 <p>Vui lòng ghi CHÍNH XÁC nội dung chuyển khoản: <strong><?= $transferContent ?></strong></p>
-                <p>Hệ thống sẽ tự động xác nhận thanh toán sau khi nhận được tiền (trong vòng 5-10 phút)</p>
+                <p>Sau khi chuyển khoản, bấm nút "Tôi đã thanh toán" bên dưới để gửi yêu cầu xác nhận cho Admin.</p>
             </div>
         <?php endif; ?>
     </div>
 
     <!-- Actions -->
     <div class="payment-actions">
-        <?php if ($paymentMethod !== 'transfer'): ?>
         <form method="POST" style="flex: 1;">
             <button type="submit" name="confirm_payment" class="btn btn-primary" 
-                    onclick="return confirm('Xác nhận bạn đã thanh toán thành công?')">
+                    onclick="return confirm('Xác nhận bạn đã thanh toán thành công?\n\nYêu cầu sẽ được gửi đến Admin để xác nhận.')">
                 <i class="fas fa-check"></i> Tôi đã thanh toán
             </button>
         </form>
-        <?php else: ?>
-        <button class="btn btn-primary" disabled>
-            <i class="fas fa-clock"></i> Chờ xác nhận thanh toán
-        </button>
-        <?php endif; ?>
         
         <a href="bills.php" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Quay lại
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -360,15 +412,6 @@ function copyToClipboard(text) {
         console.error('Lỗi sao chép:', err);
     });
 }
-
-// Tự động làm mới trang sau 30 giây nếu dùng chuyển khoản
-<?php if ($paymentMethod === 'transfer'): ?>
-setTimeout(() => {
-    if (confirm('Kiểm tra lại trạng thái thanh toán?')) {
-        window.location.href = 'bills.php';
-    }
-}, 30000);
-<?php endif; ?>
 </script>
 
 </body>

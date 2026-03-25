@@ -87,6 +87,15 @@ function formatMoney($amount) {
     return number_format((float)$amount, 0, ',', '.') . ' ₫';
 }
 
+// Kiểm tra có payment đang chờ xác nhận không
+$checkPending = $conn->prepare("SELECT PaymentID, TransactionCode, CreatedAt FROM payments WHERE InvoiceID = ? AND Status = 'Chờ xác nhận' LIMIT 1");
+$checkPending->bind_param('i', $invoiceID);
+$checkPending->execute();
+$pendingPaymentResult = $checkPending->get_result();
+$pendingPayment = $pendingPaymentResult->fetch_assoc();
+$hasPending = $pendingPayment !== null;
+$checkPending->close();
+
 require_once '../../../includes/header.php';
 ?>
 
@@ -107,9 +116,17 @@ require_once '../../../includes/header.php';
     <div class="detail-header">
         <h1><i class="fas fa-file-invoice-dollar"></i> HÓA ĐƠN KÝ TÚC XÁ</h1>
         <div class="invoice-number">Mã hóa đơn: #<?= str_pad($invoice['InvoiceID'], 6, '0', STR_PAD_LEFT) ?></div>
-        <div class="status-badge-large <?= $invoice['Status'] === 'Đã thanh toán' ? 'status-paid' : 'status-unpaid' ?>">
-            <i class="fas fa-<?= $invoice['Status'] === 'Đã thanh toán' ? 'check-circle' : 'clock' ?>"></i>
-            <?= htmlspecialchars($invoice['Status']) ?>
+        <div class="status-badge-large <?php 
+            if ($hasPending) echo 'status-pending';
+            elseif ($invoice['Status'] === 'Đã thanh toán') echo 'status-paid';
+            else echo 'status-unpaid';
+        ?>">
+            <i class="fas fa-<?php 
+                if ($hasPending) echo 'hourglass-half';
+                elseif ($invoice['Status'] === 'Đã thanh toán') echo 'check-circle';
+                else echo 'clock';
+            ?>"></i>
+            <?= $hasPending ? 'Chờ xác nhận' : htmlspecialchars($invoice['Status']) ?>
         </div>
     </div>
 
@@ -280,7 +297,15 @@ require_once '../../../includes/header.php';
 
     <!-- Action buttons -->
     <div class="action-buttons">
-        <?php if ($invoice['Status'] === 'Chưa thanh toán'): ?>
+        <?php if ($hasPending): ?>
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 15px 20px; display: flex; align-items: center; gap: 10px; flex: 1;">
+            <i class="fas fa-hourglass-half" style="color: #856404; font-size: 1.2rem;"></i>
+            <div>
+                <strong style="color: #856404;">Yêu cầu thanh toán đang chờ xác nhận</strong><br>
+                <small style="color: #856404;">Mã GD: <?= htmlspecialchars($pendingPayment['TransactionCode']) ?> — Gửi lúc <?= date('d/m/Y H:i', strtotime($pendingPayment['CreatedAt'])) ?></small>
+            </div>
+        </div>
+        <?php elseif ($invoice['Status'] === 'Chưa thanh toán'): ?>
         <a href="#" class="btn btn-success" onclick="showPaymentOptions(<?= $invoice['InvoiceID'] ?>); return false;">
             <i class="fas fa-credit-card"></i> Thanh toán ngay
         </a>

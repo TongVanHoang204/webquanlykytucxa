@@ -78,6 +78,16 @@ addLog(
     'history'
 );
 
+// Kiểm tra hóa đơn nào đang có payment chờ xác nhận
+$pendingPayments = [];
+$pendingSQL = "SELECT InvoiceID FROM payments WHERE StudentID = $studentID AND Status = 'Chờ xác nhận'";
+$pendingResult = $conn->query($pendingSQL);
+if ($pendingResult) {
+    while ($pRow = $pendingResult->fetch_assoc()) {
+        $pendingPayments[$pRow['InvoiceID']] = true;
+    }
+}
+
 
 ?>
 
@@ -203,10 +213,20 @@ addLog(
                                     <?= number_format($row['TotalAmount'], 0, ',', '.') ?>₫
                                 </td>
                                 <td>
+                                    <?php 
+                                    $isPending = isset($pendingPayments[$row['InvoiceID']]);
+                                    if ($isPending): 
+                                    ?>
+                                    <span class="status-badge-student" style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                                        <i class="fas fa-hourglass-half"></i>
+                                        Chờ xác nhận
+                                    </span>
+                                    <?php else: ?>
                                     <span class="status-badge-student status-<?= $row['Status'] === 'Đã thanh toán' ? 'paid' : 'unpaid' ?>-student">
                                         <i class="fas <?= $row['Status'] === 'Đã thanh toán' ? 'fa-check-circle' : 'fa-clock' ?>"></i>
                                         <?= $row['Status'] ?>
                                     </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td><?= date('d/m/Y', strtotime($row['CreatedAt'])) ?></td>
                                 <td>
@@ -214,10 +234,15 @@ addLog(
                                         <a href="bill_detail.php?id=<?= $row['InvoiceID'] ?>" class="btn-student btn-info-student btn-sm-student">
                                             <i class="fas fa-eye"></i> Chi tiết
                                         </a>
-                                        <?php if ($row['Status'] === 'Chưa thanh toán'): ?>
+                                        <?php if ($row['Status'] === 'Chưa thanh toán' && !$isPending): ?>
                                             <button type="button" class="btn-student btn-success-student btn-sm-student pay-btn" 
                                                     onclick="openPaymentModal(<?= $row['InvoiceID'] ?>, <?= $row['TotalAmount'] ?>)">
                                                 <i class="fas fa-credit-card"></i> Thanh toán
+                                            </button>
+                                        <?php elseif ($isPending): ?>
+                                            <button type="button" class="btn-student btn-sm-student" disabled
+                                                    style="background: #ffc107; color: #856404; border: none; cursor: not-allowed;">
+                                                <i class="fas fa-hourglass-half"></i> Đang chờ
                                             </button>
                                         <?php endif; ?>
                                     </div>
