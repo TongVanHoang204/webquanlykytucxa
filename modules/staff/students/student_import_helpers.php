@@ -208,14 +208,19 @@ function studentImportBuildContext(mysqli $conn): array
     $facultyLookup = [
         'exact' => [],
         'normalized' => [],
+        'code' => [],
     ];
 
-    $facultyResult = $conn->query("SELECT FacultyID, FacultyName FROM Faculties ORDER BY FacultyName");
+    $facultyResult = $conn->query("SELECT FacultyID, FacultyCode, FacultyName FROM Faculties ORDER BY FacultyName");
     if ($facultyResult) {
         while ($faculty = $facultyResult->fetch_assoc()) {
             $name = trim((string)$faculty['FacultyName']);
+            $code = studentImportIdentityKey((string)($faculty['FacultyCode'] ?? ''));
             $facultyLookup['exact'][$name] = (int)$faculty['FacultyID'];
             $facultyLookup['normalized'][studentImportNormalizeText($name)] = (int)$faculty['FacultyID'];
+            if ($code !== '') {
+                $facultyLookup['code'][$code] = (int)$faculty['FacultyID'];
+            }
         }
     }
 
@@ -267,6 +272,11 @@ function studentImportResolveFacultyId(string $facultyName, array $facultyLookup
     $normalized = studentImportNormalizeText($facultyName);
     if ($normalized !== '' && isset($facultyLookup['normalized'][$normalized])) {
         return $facultyLookup['normalized'][$normalized];
+    }
+
+    $facultyCode = studentImportIdentityKey($facultyName);
+    if ($facultyCode !== '' && isset($facultyLookup['code'][$facultyCode])) {
+        return $facultyLookup['code'][$facultyCode];
     }
 
     return null;
