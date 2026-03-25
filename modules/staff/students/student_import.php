@@ -33,6 +33,10 @@ $errorRows = [];
 $validRows = [];
 $uploadedFile = '';
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    unset($_SESSION['student_import_error_rows'], $_SESSION['student_import_error_filename']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
     requireCsrf();
 
@@ -61,10 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                         $analysis = studentImportAnalyzeRows($xlsx->rows(), studentImportBuildContext($conn));
                         $validRows = $analysis['validRows'];
                         $errorRows = $analysis['errorRows'];
+                        $_SESSION['student_import_error_rows'] = $errorRows;
+                        $_SESSION['student_import_error_filename'] = $fileName;
 
                         if (empty($validRows) && empty($errorRows)) {
                             $uploadError = 'File Excel không có dòng dữ liệu nào để xử lý.';
                             @unlink($targetPath);
+                            unset($_SESSION['student_import_error_rows'], $_SESSION['student_import_error_filename']);
                         } else {
                             $uploadedFile = $fileName;
                         }
@@ -170,6 +177,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                             <i class="fa-solid fa-file-import"></i> Nhập <?= count($validRows) ?> sinh viên hợp lệ
                         </button>
                     </form>
+                <?php endif; ?>
+
+                <?php if (!empty($errorRows)): ?>
+                    <a href="download_import_errors.php" class="btn btn-secondary">
+                        <i class="fa-solid fa-file-arrow-down"></i> Táº£i file dÃ²ng lá»—i
+                    </a>
                 <?php endif; ?>
 
                 <a href="student_import.php" class="btn btn-danger">
