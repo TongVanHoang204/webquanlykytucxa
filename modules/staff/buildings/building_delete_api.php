@@ -46,11 +46,10 @@ if (!$building) {
 }
 
 if ($confirmName === '' || mb_strtolower($confirmName, 'UTF-8') !== mb_strtolower((string)$building['BuildingName'], 'UTF-8')) {
-    addLog(
+    logBuildingAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete building denied',
-        'Buildings',
+        'delete_denied',
         'Từ chối xóa tòa nhà do xác nhận không khớp: ID=' . $buildingId,
         'warning'
     );
@@ -62,11 +61,10 @@ if ($confirmName === '' || mb_strtolower($confirmName, 'UTF-8') !== mb_strtolowe
 }
 
 if ((int)$building['TotalRooms'] > 0) {
-    addLog(
+    logBuildingAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete building denied',
-        'Buildings',
+        'delete_denied',
         'Từ chối xóa tòa nhà ID=' . $buildingId . ' vì vẫn còn phòng trực thuộc.',
         'warning'
     );
@@ -82,11 +80,10 @@ $deleteStmt->bind_param('i', $buildingId);
 
 if (!$deleteStmt->execute()) {
     $deleteStmt->close();
-    addLog(
+    logBuildingAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete building failed',
-        'Buildings',
+        'delete_failed',
         'Xóa tòa nhà thất bại: ID=' . $buildingId,
         'warning'
     );
@@ -99,11 +96,10 @@ if (!$deleteStmt->execute()) {
 
 $deleteStmt->close();
 
-addLog(
+logBuildingAction(
     $conn,
     $_SESSION['UserID'] ?? null,
-    'Delete building',
-    'Buildings',
+    'delete',
     'Đã xóa tòa nhà ID=' . $buildingId . ' - Tên: ' . $building['BuildingName'],
     'history'
 );

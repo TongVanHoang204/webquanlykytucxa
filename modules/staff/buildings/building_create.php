@@ -82,11 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $newId = $stmt->insert_id;
-            addLog(
+            logBuildingAction(
                 $conn,
                 $_SESSION['UserID'] ?? null,
-                'Create building',
-                'Buildings',
+                'create',
                 "Tạo tòa nhà ID={$newId} - Tên: {$old['BuildingName']}",
                 'activity'
             );

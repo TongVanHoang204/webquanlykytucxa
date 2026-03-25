@@ -213,11 +213,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $oldRoomNumber = (string)$room['RoomNumber'];
                     $updateStmt->close();
 
-                    addLog(
+                    logRoomAction(
                         $conn,
                         $_SESSION['UserID'] ?? null,
-                        'Update room',
-                        'Rooms',
+                        'update',
                         "Cập nhật phòng ID={$roomId}: {$oldBuildingName}-{$oldRoomNumber} -> {$newBuildingName}-{$roomNumber}",
                         'history'
                     );

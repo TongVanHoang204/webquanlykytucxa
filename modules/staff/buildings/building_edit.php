@@ -93,11 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($updateStmt->execute()) {
             $updateStmt->close();
-            addLog(
+            logBuildingAction(
                 $conn,
                 $_SESSION['UserID'] ?? null,
-                'Update building',
-                'Buildings',
+                'update',
                 "Cập nhật tòa nhà ID={$buildingId} - Tên mới: {$old['BuildingName']}",
                 'history'
             );

@@ -197,11 +197,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newRoomId = (int)($insertStmt->insert_id ?: $conn->insert_id);
             $insertStmt->close();
 
-            addLog(
+            logRoomAction(
                 $conn,
                 $_SESSION['UserID'] ?? null,
-                'Create room',
-                'Rooms',
+                'create',
                 "Thêm phòng mới ID={$newRoomId} - Số phòng: {$number} (form: {$numberRaw})",
                 'activity'
             );

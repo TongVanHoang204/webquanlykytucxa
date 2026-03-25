@@ -35,11 +35,10 @@ if (!$room) {
 }
 
 if ($confirmRoom === '' || strcasecmp($confirmRoom, (string)$room['RoomNumber']) !== 0) {
-    addLog(
+    logRoomAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete room denied',
-        'Rooms',
+        'delete_denied',
         'Từ chối xóa phòng do xác nhận không khớp: ID=' . $id,
         'warning'
     );
@@ -60,11 +59,10 @@ $activeContracts = (int)($activeContractStmt->get_result()->fetch_assoc()['cnt']
 $activeContractStmt->close();
 
 if ($activeContracts > 0 || (int)$room['CurrentOccupants'] > 0) {
-    addLog(
+    logRoomAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete room denied',
-        'Rooms',
+        'delete_denied',
         'Từ chối xóa phòng ID=' . $id . ' vì vẫn còn sinh viên đang ở.',
         'warning'
     );
@@ -108,11 +106,10 @@ try {
 
     $conn->commit();
 
-    addLog(
+    logRoomAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete room',
-        'Rooms',
+        'delete',
         'Đã xóa phòng ID=' . $id . ' - Số phòng: ' . $room['RoomNumber'],
         'history'
     );
@@ -121,11 +118,10 @@ try {
     $_SESSION['message_type'] = 'success';
 } catch (Throwable $e) {
     $conn->rollback();
-    addLog(
+    logRoomAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete room failed',
-        'Rooms',
+        'delete_failed',
         'Xóa phòng thất bại: ID=' . $id . ' - ' . $e->getMessage(),
         'warning'
     );
