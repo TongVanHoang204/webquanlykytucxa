@@ -56,8 +56,8 @@ if ($userAvatar && !empty($userAvatar)) {
     <title><?= htmlspecialchars($pageTitle) ?></title>
 
     <!-- Fonts & Icons -->
-    <link rel="stylesheet" href="../assets/vendor/fontawesome/css/all.min.css" />
-    <link href="../assets/vendor/fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fontawesome/css/all.min.css" />
+    <link href="<?= $base ?>assets/vendor/fonts/fonts.css" rel="stylesheet">
     
     <!-- Core CSS -->
     <link rel="stylesheet" href="<?= $base ?>assets/css/global.css" />
@@ -172,9 +172,9 @@ if ($userAvatar && !empty($userAvatar)) {
         <div class="right">
             <!-- Admin Chat AI Toggle -->
             <?php if ($userRole === 'Admin'): ?>
-                <div id="adminChatAiToggle" class="chat-ai-toggle" title="Trợ lý Admin">
+                <button id="adminChatAiToggle" class="chat-ai-toggle" title="Trợ lý AI" aria-label="Trợ lý AI">
                     <i class="fas fa-robot"></i>
-                </div>
+                </button>
             <?php endif; ?>
 
             <!-- Theme Toggle -->

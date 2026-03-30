@@ -119,28 +119,29 @@ while ($row = $modRes->fetch_assoc()) {
 <head>
     <meta charset="UTF-8">
     <title>Nhật ký hệ thống</title>
-    <link rel="stylesheet" href="/assets/css/admin/admin_dashboard.css">
-    <link rel="stylesheet" href="/assets/css/admin/admin_users.css">
-    <link rel="stylesheet" href="/assets/css/admin/log.css">
-
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/modules_shared.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <div class="log-page">
-        <div class="log-header">
-            <h1>📜 Nhật ký / Log hệ thống</h1>
-            <div>
-                <span class="log-summary-chip">
-                    Tổng: <strong><?= $total ?></strong> bản ghi
+    <div class="mod-container">
+        <!-- Header -->
+        <div class="mod-header">
+            <div class="mod-header-left">
+                <h2><i class="fas fa-scroll"></i> Nhật ký hệ thống</h2>
+            </div>
+            <div class="mod-header-right">
+                <span class="mod-badge mod-badge-blue">
+                    <i class="fas fa-database"></i> Tổng: <strong><?= $total ?></strong> bản ghi
                 </span>
             </div>
         </div>
 
-
         <!-- Tabs loại log -->
-        <div class="log-tabs">
+        <div class="mod-tabs">
             <?php
-            // helper tạo link giữ nguyên các param khác
             function logTabUrl(string $typeVal = ''): string
             {
                 $params = $_GET;
@@ -149,26 +150,27 @@ while ($row = $modRes->fetch_assoc()) {
                 return '?' . http_build_query($params);
             }
             ?>
-            <a href="<?= logTabUrl('') ?>" class="log-tab <?= $logType === '' ? 'active' : '' ?>">
-                🔎 Tất cả
+            <a href="<?= logTabUrl('') ?>" class="mod-tab <?= $logType === '' ? 'active' : '' ?>">
+                <i class="fas fa-layer-group"></i> Tất cả
             </a>
-            <a href="<?= logTabUrl('activity') ?>" class="log-tab <?= $logType === 'activity' ? 'active' : '' ?>">
-                ✅ Activity / Theo dõi
+            <a href="<?= logTabUrl('activity') ?>" class="mod-tab <?= $logType === 'activity' ? 'active' : '' ?>">
+                <i class="fas fa-check-circle"></i> Activity
             </a>
-            <a href="<?= logTabUrl('history') ?>" class="log-tab <?= $logType === 'history' ? 'active' : '' ?>">
-                ⏱️ Lịch sử
+            <a href="<?= logTabUrl('history') ?>" class="mod-tab <?= $logType === 'history' ? 'active' : '' ?>">
+                <i class="fas fa-history"></i> Lịch sử
             </a>
-            <a href="<?= logTabUrl('system') ?>" class="log-tab <?= $logType === 'system' ? 'active' : '' ?>">
-                ⚙️ Logs hệ thống
+            <a href="<?= logTabUrl('system') ?>" class="mod-tab <?= $logType === 'system' ? 'active' : '' ?>">
+                <i class="fas fa-cog"></i> Hệ thống
             </a>
         </div>
-        <form method="get" class="log-filters">
-            <!-- Giữ lại log_type khi submit bộ lọc -->
+
+        <!-- Filters -->
+        <form method="get" class="mod-filters">
             <input type="hidden" name="log_type" value="<?= htmlspecialchars($logType) ?>">
 
-            <div class="field">
-                <label>Module</label>
-                <select name="module" onchange="this.form.submit()">
+            <div class="mod-filter-group">
+                <label><i class="fas fa-cube"></i> Module</label>
+                <select name="module" class="mod-select" onchange="this.form.submit()">
                     <option value="">Tất cả module</option>
                     <?php foreach ($modules as $mod): ?>
                         <option value="<?= htmlspecialchars($mod) ?>" <?= $module === $mod ? 'selected' : '' ?>>
@@ -178,167 +180,186 @@ while ($row = $modRes->fetch_assoc()) {
                 </select>
             </div>
 
-            <div class="field">
-                <label>Từ khóa</label>
-                <input type="text" name="q" placeholder="Action, mô tả..."
+            <div class="mod-filter-group">
+                <label><i class="fas fa-search"></i> Từ khóa</label>
+                <input type="text" name="q" class="mod-input" placeholder="Action, mô tả..."
                     value="<?= htmlspecialchars($q) ?>">
             </div>
 
-            <div class="field">
-                <label>Từ ngày</label>
-                <input type="date" name="date_from" value="<?= htmlspecialchars($dateFrom) ?>">
+            <div class="mod-filter-group">
+                <label><i class="fas fa-calendar"></i> Từ ngày</label>
+                <input type="date" name="date_from" class="mod-input" value="<?= htmlspecialchars($dateFrom) ?>">
             </div>
 
-            <div class="field">
-                <label>Đến ngày</label>
-                <input type="date" name="date_to" value="<?= htmlspecialchars($dateTo) ?>">
+            <div class="mod-filter-group">
+                <label><i class="fas fa-calendar-check"></i> Đến ngày</label>
+                <input type="date" name="date_to" class="mod-input" value="<?= htmlspecialchars($dateTo) ?>">
             </div>
 
-            <button type="submit" class="btn-reset">
-                Áp dụng
-            </button>
-            <a href="log.php" class="btn-reset" style="border-style:dashed;">
-                Đặt lại
-            </a>
+            <div class="mod-filter-group" style="flex:0; min-width: auto;">
+                <label>&nbsp;</label>
+                <div style="display:flex; gap:8px;">
+                    <button type="submit" class="mod-btn mod-btn-primary mod-btn-sm">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                    <a href="log.php" class="mod-btn mod-btn-outline mod-btn-sm">
+                        <i class="fas fa-redo"></i> Reset
+                    </a>
+                </div>
+            </div>
         </form>
 
-
         <!-- Bảng log -->
-        <table class="log-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Loại</th>
-                    <th>Hành động / Module</th>
-                    <th>Mô tả</th>
-                    <th>Người thực hiện</th>
-                    <th>IP / Thiết bị</th>
-                    <th>Thời gian</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if ($result && $result->num_rows > 0): ?>
-                    <?php while ($row = $result->fetch_assoc()): ?>
-                        <?php
-                        $typeClass = $row['LogType'] ?? 'activity';
-                        $displayName = $row['FullName'] ?: $row['Username'];
-                        if (!$displayName) $displayName = 'Khách / Hệ thống';
-
-                        // Chuẩn hóa IP hiển thị
-                        $rawIp = $row['IPAddress'] ?? '';
-                        if ($rawIp === '::1') {
-                            $ipDisplay = '127.0.0.1 (localhost)';
-                        } elseif (empty($rawIp)) {
-                            $ipDisplay = '-';
-                        } else {
-                            $ipDisplay = $rawIp;
-                        }
-
-                        // User Agent
-                        $ua = $row['UserAgent'] ?? '';
-
-                        // CSRF token
-                        if (empty($_SESSION['_csrf'])) {
-                            $_SESSION['_csrf'] = bin2hex(random_bytes(32));
-                        }
-                        $csrfToken = $_SESSION['_csrf'];
-                        ?>
+        <div class="mod-table-wrap">
+            <div class="mod-table-scroll">
+                <table class="mod-table">
+                    <thead>
                         <tr>
-                            <td><?= (int)$row['LogID'] ?></td>
-                            <td>
-                                <span class="badge-type <?= htmlspecialchars($typeClass) ?>">
-                                    <?php if ($typeClass === 'activity'): ?>
-                                        ✔ Activity
-                                    <?php elseif ($typeClass === 'history'): ?>
-                                        ⏱ History
-                                    <?php else: ?>
-                                        ⚙ System
-                                    <?php endif; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <div class="log-action"><?= htmlspecialchars($row['Action']) ?></div>
-                                <div class="log-module">Module: <?= htmlspecialchars($row['Module']) ?></div>
-                            </td>
-                            <td>
-                                <div class="log-description">
-                                    <?= nl2br(htmlspecialchars($row['Description'])) ?>
-                                </div>
-                            </td>
-                            <td class="log-user">
-                                <?= htmlspecialchars($displayName) ?>
-                                <?php if ($row['UserID']): ?>
-                                    <div style="font-size:11px;color:#9ca3af;">UserID: <?= (int)$row['UserID'] ?></div>
-                                <?php endif; ?>
-                            </td>
-
-                            <!-- CỘT IP / THIẾT BỊ -->
-                            <td>
-                                <div class="log-ip"><?= htmlspecialchars($ipDisplay) ?></div>
-                                <?php if (!empty($ua)): ?>
-                                    <div class="log-ip ua-chip" title="<?= htmlspecialchars($ua) ?>">
-                                        Thiết bị (UA…)
-                                    </div>
-                                <?php endif; ?>
-                            </td>
-
-                            <td><?= date('d/m/Y H:i', strtotime($row['CreatedAt'])) ?></td>
-
-                            <!-- ✅ CỘT THAO TÁC -->
-                            <td class="log-actions">
-                                <!-- Xem chi tiết -->
-                                <a href="log_view.php?id=<?= (int)$row['LogID'] ?>"
-                                    class="log-btn log-btn-view">
-                                </a>
-
-                                <!-- Xóa log -->
-                                <form action="log_delete.php" method="post"
-                                    onsubmit="return confirm('Xóa log #<?= (int)$row['LogID'] ?>? Hành động này không thể hoàn tác.');">
-                                    <input type="hidden" name="log_id" value="<?= (int)$row['LogID'] ?>">
-                                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrfToken) ?>">
-                                    <button type="submit" class="log-btn log-btn-delete">
-
-                                    </button>
-                                </form>
-                            </td>
+                            <th>#</th>
+                            <th>Loại</th>
+                            <th>Hành động / Module</th>
+                            <th>Mô tả</th>
+                            <th>Người thực hiện</th>
+                            <th>IP / Thiết bị</th>
+                            <th>Thời gian</th>
+                            <th>Thao tác</th>
                         </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="8" class="empty-row">Chưa có bản ghi log nào phù hợp.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    </thead>
+                    <tbody>
+                        <?php if ($result && $result->num_rows > 0): ?>
+                            <?php while ($row = $result->fetch_assoc()): ?>
+                                <?php
+                                $typeClass = $row['LogType'] ?? 'activity';
+                                $displayName = $row['FullName'] ?: $row['Username'];
+                                if (!$displayName) $displayName = 'Khách / Hệ thống';
 
+                                $rawIp = $row['IPAddress'] ?? '';
+                                if ($rawIp === '::1') {
+                                    $ipDisplay = '127.0.0.1 (localhost)';
+                                } elseif (empty($rawIp)) {
+                                    $ipDisplay = '-';
+                                } else {
+                                    $ipDisplay = $rawIp;
+                                }
+
+                                $ua = $row['UserAgent'] ?? '';
+
+                                if (empty($_SESSION['_csrf'])) {
+                                    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+                                }
+                                $csrfToken = $_SESSION['_csrf'];
+
+                                $badgeClass = match($typeClass) {
+                                    'activity' => 'mod-badge-emerald',
+                                    'history'  => 'mod-badge-blue',
+                                    'system'   => 'mod-badge-amber',
+                                    default    => 'mod-badge-gray',
+                                };
+                                $badgeIcon = match($typeClass) {
+                                    'activity' => 'fa-check-circle',
+                                    'history'  => 'fa-clock',
+                                    'system'   => 'fa-cog',
+                                    default    => 'fa-circle',
+                                };
+                                ?>
+                                <tr>
+                                    <td><span class="mod-cell-muted"><?= (int)$row['LogID'] ?></span></td>
+                                    <td>
+                                        <span class="mod-badge <?= $badgeClass ?>">
+                                            <i class="fas <?= $badgeIcon ?>"></i>
+                                            <?= ucfirst(htmlspecialchars($typeClass)) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="mod-cell-name"><?= htmlspecialchars($row['Action']) ?></div>
+                                        <div class="mod-cell-sub"><i class="fas fa-cube"></i> <?= htmlspecialchars($row['Module']) ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="mod-truncate" style="max-width:280px;" title="<?= htmlspecialchars($row['Description']) ?>">
+                                            <?= htmlspecialchars($row['Description']) ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="mod-cell-name"><?= htmlspecialchars($displayName) ?></div>
+                                        <?php if ($row['UserID']): ?>
+                                            <div class="mod-cell-sub">ID: <?= (int)$row['UserID'] ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="mod-cell-muted"><?= htmlspecialchars($ipDisplay) ?></div>
+                                        <?php if (!empty($ua)): ?>
+                                            <div class="mod-cell-sub" title="<?= htmlspecialchars($ua) ?>">
+                                                <i class="fas fa-mobile-alt"></i> UA…
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><span class="mod-cell-muted"><?= date('d/m/Y H:i', strtotime($row['CreatedAt'])) ?></span></td>
+                                    <td>
+                                        <div class="mod-row-actions">
+                                            <a href="log_view.php?id=<?= (int)$row['LogID'] ?>" class="mod-btn-icon view" title="Xem">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <form action="log_delete.php" method="post" style="display:inline;"
+                                                onsubmit="return confirm('Xóa log #<?= (int)$row['LogID'] ?>?');">
+                                                <input type="hidden" name="log_id" value="<?= (int)$row['LogID'] ?>">
+                                                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrfToken) ?>">
+                                                <button type="submit" class="mod-btn-icon delete" title="Xóa">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="8">
+                                    <div class="mod-empty">
+                                        <i class="fas fa-scroll"></i>
+                                        <p>Chưa có bản ghi log nào phù hợp</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Phân trang -->
-        <div class="pagination">
-            <?php
-            $queryBase = $_GET;
-            ?>
+        <?php if ($totalPages > 1): ?>
+        <div class="mod-pagination">
+            <?php $queryBase = $_GET; ?>
             <?php if ($page > 1): ?>
+                <?php $queryBase['page'] = 1; ?>
+                <a href="?<?= http_build_query($queryBase) ?>" class="mod-pg" title="Đầu">&laquo;</a>
                 <?php $queryBase['page'] = $page - 1; ?>
-                <a href="?<?= http_build_query($queryBase) ?>">« Trước</a>
+                <a href="?<?= http_build_query($queryBase) ?>" class="mod-pg">&lsaquo;</a>
             <?php else: ?>
-                <a class="disabled">« Trước</a>
+                <span class="mod-pg disabled">&laquo;</span>
+                <span class="mod-pg disabled">&lsaquo;</span>
             <?php endif; ?>
 
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <?php $queryBase['page'] = $i; ?>
-                <a href="?<?= http_build_query($queryBase) ?>" class="<?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
-            <?php endfor; ?>
+            <span class="mod-pg-info">Trang <?= $page ?> / <?= $totalPages ?></span>
 
             <?php if ($page < $totalPages): ?>
                 <?php $queryBase['page'] = $page + 1; ?>
-                <a href="?<?= http_build_query($queryBase) ?>">Sau »</a>
+                <a href="?<?= http_build_query($queryBase) ?>" class="mod-pg">&rsaquo;</a>
+                <?php $queryBase['page'] = $totalPages; ?>
+                <a href="?<?= http_build_query($queryBase) ?>" class="mod-pg" title="Cuối">&raquo;</a>
             <?php else: ?>
-                <a class="disabled">Sau »</a>
+                <span class="mod-pg disabled">&rsaquo;</span>
+                <span class="mod-pg disabled">&raquo;</span>
             <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Results info -->
+        <div class="mod-results-info">
+            <i class="fas fa-info-circle"></i>
+            Hiển thị <?= min($perPage, $total - $offset) ?> / <?= $total ?> bản ghi
         </div>
     </div>
 
 </body>
-
 </html>

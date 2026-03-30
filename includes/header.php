@@ -74,7 +74,8 @@ if (!empty($_SESSION['UserID'])) {
         <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>">
     <?php endforeach; ?>
 
-    <link rel="stylesheet" href="../assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fonts/fonts.css">
 </head>
 
 <body<?= $pageBodyClass !== '' ? ' class="' . htmlspecialchars($pageBodyClass) . '"' : '' ?>>
