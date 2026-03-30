@@ -295,7 +295,7 @@ require_once '../../../includes/admin_header.php';
     <link rel="stylesheet" href="/assets/css/staff/contract/staff_contract_create.css">
     <link rel="icon" href="/assets/img/favicon.ico">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />

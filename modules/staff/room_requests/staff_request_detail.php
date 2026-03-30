@@ -124,7 +124,7 @@ function statusBadgeClass($status) {
     <title>Chi tiết yêu cầu đăng ký phòng #<?= (int)$request['RequestID'] ?></title>
     <link rel="stylesheet" href="../../../assets/css/admin.css"><!-- nếu có -->
     <link rel="stylesheet" href="../../../assets/css/staff/room_requests/staff_request_detail.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
 </head>

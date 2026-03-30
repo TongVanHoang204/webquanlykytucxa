@@ -104,7 +104,7 @@ $dataMonthly = array_map(fn($x) => $x['count'], array_values($months));
     <title>Thống kê người dùng | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/users/user_stats.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 </head>
 

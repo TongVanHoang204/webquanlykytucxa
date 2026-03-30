@@ -58,7 +58,7 @@ $processed_rate = $total > 0 ? round(($processed / $total) * 100, 1) : 0;
     <title>Thống kê phản ánh | Quản lý KTX</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/feedback/staff_feedback_stats.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 

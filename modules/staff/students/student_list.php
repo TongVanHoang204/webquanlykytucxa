@@ -194,7 +194,7 @@ function avatarUrl(?string $path, ?string $gender): string
     <title>Quản lý Sinh viên | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/students/staff_student_list.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

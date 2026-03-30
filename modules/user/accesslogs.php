@@ -118,7 +118,7 @@ if (isset($_GET['view']) && is_numeric($_GET['view'])) {
             <meta charset="UTF-8">
             <title><?= htmlspecialchars($detail['Title']) ?> - Thông báo ký túc xá</title>
             <link rel="stylesheet"
-                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+                href="../../assets/vendor/fontawesome/css/all.min.css">
             <link rel="stylesheet" href="/assets/css/accesslogs.css">
         </head>
 
@@ -166,7 +166,7 @@ if (isset($_GET['view']) && is_numeric($_GET['view'])) {
     <meta charset="UTF-8">
     <title>Thông báo ký túc xá - Ký túc xá</title>
     <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        href="../../assets/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/accesslogs.css">
 </head>
 

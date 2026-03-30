@@ -74,7 +74,7 @@ if (!empty($_SESSION['UserID'])) {
         <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>">
     <?php endforeach; ?>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/vendor/fontawesome/css/all.min.css">
 </head>
 
 <body<?= $pageBodyClass !== '' ? ' class="' . htmlspecialchars($pageBodyClass) . '"' : '' ?>>

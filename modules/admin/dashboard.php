@@ -97,169 +97,187 @@ require_once '../../includes/admin_header.php';
     <title>Trang Quản Trị - Hệ Thống Ký Túc Xá</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../assets/css/admin/admin_dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/vendor/fontawesome/css/all.min.css">
 </head>
 
-<body>
-    <div class="dashboard-container">
-        <!-- Welcome Banner -->
-        <div class="welcome-banner">
-            <h3>Xin chào, <?php echo htmlspecialchars($adminName); ?>! 👋</h3>
-            <p>Chúc bạn một ngày làm việc hiệu quả. Dưới đây là tổng quan về hệ thống.</p>
+    <div class="bento-dashboard-container">
+        <!-- 1. Bento Welcome Banner -->
+        <div class="bento-welcome gradient-flare">
+            <div class="welcome-text">
+                <h1>Xin chào, <?php echo htmlspecialchars($adminName); ?>! 👋</h1>
+                <p>Khám phá tình trạng hiện tại của hệ thống. Dưới đây là các chỉ số theo thời gian thực.</p>
+            </div>
+            <div class="welcome-quick-stats">
+                <div class="wqs-item">
+                    <div class="wqs-icon"><i class="fas fa-user-graduate"></i></div>
+                    <div class="wqs-info">
+                        <span class="number"><?= $totalStudents ?></span>
+                        <span class="label">Sinh viên</span>
+                    </div>
+                </div>
+                <div class="wqs-item">
+                    <div class="wqs-icon"><i class="fas fa-file-signature"></i></div>
+                    <div class="wqs-info">
+                        <span class="number"><?= $activeContracts ?></span>
+                        <span class="label">Hợp đồng</span>
+                    </div>
+                </div>
+                <div class="wqs-item">
+                    <div class="wqs-icon"><i class="fas fa-door-open"></i></div>
+                    <div class="wqs-info">
+                        <span class="number"><?= $availableRooms ?></span>
+                        <span class="label">Phòng trống</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flare-effect"></div>
+        </div>
 
-            <div class="quick-stats">
-                <div class="quick-stat">
-                    <span class="number"><?= $totalStudents ?></span>
-                    <span class="label">Sinh viên</span>
+        <!-- 2. Bento Metrics Grid -->
+        <div class="bento-metrics">
+            <div class="bento-metric-card glow-amber">
+                <div class="icon-wrapper">
+                    <i class="fas fa-file-invoice"></i>
                 </div>
-                <div class="quick-stat">
-                    <span class="number"><?= $activeContracts ?></span>
-                    <span class="label">Hợp đồng</span>
+                <div class="metric-content">
+                    <h3>Hóa đơn chờ</h3>
+                    <div class="metric-number"><?= $unpaidCount ?></div>
+                    <span class="trend trend-warning"><i class="fas fa-exclamation-circle"></i> Cần xử lý</span>
                 </div>
-                <div class="quick-stat">
-                    <span class="number"><?= $availableRooms ?></span>
-                    <span class="label">Phòng trống</span>
+            </div>
+            
+            <div class="bento-metric-card glow-fuchsia">
+                <div class="icon-wrapper">
+                    <i class="fas fa-comment-dots"></i>
+                </div>
+                <div class="metric-content">
+                    <h3>Phản ánh</h3>
+                    <div class="metric-number"><?= $feedbackPending ?></div>
+                    <span class="trend trend-info"><i class="fas fa-clock"></i> Chờ phản hồi</span>
+                </div>
+            </div>
+
+            <div class="bento-metric-card glow-emerald">
+                <div class="icon-wrapper">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <h3>Hợp đồng</h3>
+                    <div class="metric-number"><?= $activeContracts ?></div>
+                    <span class="trend trend-success"><i class="fas fa-chart-line"></i> Đang hiệu lực</span>
+                </div>
+            </div>
+
+            <div class="bento-metric-card glow-blue">
+                <div class="icon-wrapper">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="metric-content">
+                    <h3>Phòng trống</h3>
+                    <div class="metric-number"><?= $availableRooms ?></div>
+                    <span class="trend trend-primary"><i class="fas fa-key"></i> Sẵn sàng</span>
                 </div>
             </div>
         </div>
 
-        <div class="dashboard-header">
-            <h2><i class="fas fa-tachometer-alt"></i> Bảng điều khiển quản trị</h2>
-        </div>
+        <!-- 3. Bento Actions Modules -->
+        <div class="bento-modules">
+            <!-- Systems Management Bento -->
+            <div class="bento-module-card span-col-2">
+                <div class="module-header">
+                    <div class="header-icon"><i class="fas fa-cogs"></i></div>
+                    <h2>Quản lý Hệ Thống</h2>
+                </div>
+                <div class="module-grid-links">
+                    <a href="../staff/users/users.php" class="bento-btn"><i class="fas fa-users-cog"></i> Mọi Người Dùng</a>
+                    <a href="../staff/students/student_list.php" class="bento-btn"><i class="fas fa-user-graduate"></i> Sinh Viên</a>
+                    <a href="../staff/buildings/building_list.php" class="bento-btn"><i class="fas fa-building"></i> Tòa Nhà</a>
+                    <a href="../staff/rooms/rooms.php" class="bento-btn"><i class="fas fa-bed"></i> Quản Lý Phòng</a>
+                    <a href="../staff/feedbacks/feedback_list.php" class="bento-btn"><i class="fas fa-headset"></i> Trung Tâm Hỗ Trợ</a>
+                    <a href="../staff/invoices/invoice_list.php" class="bento-btn"><i class="fas fa-file-invoice-dollar"></i> Kế Toán / Hóa Đơn</a>
+                    <a href="../staff/contract/contract_list.php" class="bento-btn"><i class="fas fa-file-signature"></i> Thỏa Thuận Lưu Trú</a>
+                    <a href="../staff/room_requests/staff_request_list.php" class="bento-btn"><i class="fas fa-clipboard-list"></i> Yêu Cầu Thuê Phòng</a>
+                    <a href="../../modules/staff/announcements/announcement_list.php" class="bento-btn"><i class="fas fa-bullhorn"></i> Bản Tin Hệ Thống</a>
+                </div>
+            </div>
 
-        <!-- Statistics Grid -->
-        <div class="stats-grid">
-            <div class="stat-card i-amber">
-                <i class="fas fa-file-invoice i-amber"></i>
-                <div class="stat-card-content">
-                    <h3>Hóa đơn chưa thanh toán</h3>
-                    <p><?= $unpaidCount ?> hóa đơn</p>
-                    <div class="trend">
-                        <i class="fas fa-exclamation-circle"></i>
-                        Cần xử lý
+            <div class="bento-module-column">
+                <!-- Quick Actions Bento -->
+                <div class="bento-module-card quick-actions">
+                    <div class="module-header">
+                        <div class="header-icon"><i class="fas fa-bolt"></i></div>
+                        <h2>Tác Vụ Tốc Độ</h2>
+                    </div>
+                    <div class="module-list-links">
+                        <a href="../staff/buildings/building_create.php" class="list-item"><i class="fas fa-plus"></i> Khởi tạo Tòa nhà</a>
+                        <a href="../../modules/staff/users/user_create.php" class="list-item"><i class="fas fa-user-plus"></i> Cấp tài khoản mới</a>
+                        <a href="../staff/students/student_create.php" class="list-item"><i class="fas fa-plus-circle"></i> Hồ sơ Sinh viên</a>
+                        <a href="../staff/rooms/room_add.php" class="list-item"><i class="fas fa-folder-plus"></i> Thêm Phòng ở</a>
+                        <a href="../staff/invoices/invoice_create.php" class="list-item"><i class="fas fa-file-medical"></i> Lập Hóa đơn</a>
+                        <a href="../staff/contract/contract_create.php" class="list-item"><i class="fas fa-pen-nib"></i> Soạn Hợp đồng</a>
+                        <a href="../staff/announcements/announcement_create.php" class="list-item"><i class="fas fa-broadcast-tower"></i> Đăng Thông báo</a>
                     </div>
                 </div>
             </div>
-
-            <div class="stat-card i-fuchsia">
-                <i class="fas fa-comment-dots i-fuchsia"></i>
-                <div class="stat-card-content">
-                    <h3>Phản ánh đang xử lý</h3>
-                    <p><?= $feedbackPending ?> phản ánh</p>
-                    <div class="trend">
-                        <i class="fas fa-clock"></i>
-                        Chờ phản hồi
+            
+            <div class="bento-module-column">
+                <!-- Analytics Bento -->
+                <div class="bento-module-card analytics glassmorphism">
+                    <div class="module-header glass-header">
+                        <div class="header-icon"><i class="fas fa-chart-pie"></i></div>
+                        <h2>Báo Cáo & Thống Kê</h2>
+                    </div>
+                    <div class="module-list-links">
+                        <a href="../admin/report/finance_report.php" class="list-item hover-glass"><i class="fas fa-chart-line"></i> Dòng tiền & Tài chính</a>
+                        <a href="../../modules/staff/rooms/room_occupancy.php" class="list-item hover-glass"><i class="fas fa-chart-bar"></i> Lấp đầy Cơ sở vật chất</a>
+                        <a href="../../modules/staff/feedbacks/feedback_stats.php" class="list-item hover-glass"><i class="fas fa-chart-area"></i> Đo lường Sự Hài Lòng</a>
+                        <a href="../../modules/staff/users/user_stats.php" class="list-item hover-glass"><i class="fas fa-users-viewfinder"></i> Tổng quan Người dùng</a>
+                        <a href="../../modules/staff/students/student_stats.php" class="list-item hover-glass"><i class="fas fa-graduation-cap"></i> Phân loại Sinh viên</a>
                     </div>
                 </div>
             </div>
-
-            <div class="stat-card i-emerald">
-                <i class="fas fa-file-signature i-emerald"></i>
-                <div class="stat-card-content">
-                    <h3>Hợp đồng hiệu lực</h3>
-                    <p><?= $activeContracts ?> hợp đồng</p>
-                    <div class="trend">
-                        <i class="fas fa-check-circle"></i>
-                        Đang hoạt động
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat-card i-blue">
-                <i class="fas fa-door-open i-blue"></i>
-                <div class="stat-card-content">
-                    <h3>Phòng còn trống</h3>
-                    <p><?= $availableRooms ?> phòng</p>
-                    <div class="trend">
-                        <i class="fas fa-home"></i>
-                        Có sẵn
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Navigation & Actions -->
-        <div class="dashboard-actions">
-            <div class="action-card">
-                <h3><i class="fas fa-cogs"></i> Quản lý hệ thống</h3>
-                <div class="nav-links">
-                    <a href="../staff/users/users.php"><i class="fas fa-users"></i> <span>Quản lý người dùng</span></a>
-                    <a href="../staff/students/student_list.php"><i class="fas fa-users"></i> <span>Quản lý sinh viên</span></a>
-                    <a href="../staff/buildings/building_list.php"><i class="fas fa-door-open"></i> <span>Quản lý tòa nhà</span></a>
-                    <a href="../staff/rooms/rooms.php"><i class="fas fa-door-open"></i> <span>Quản lý phòng</span></a>
-                    <a href="../staff/feedbacks/feedback_list.php"><i class="fas fa-comments"></i> <span>Xem phản ánh</span></a>
-                    <a href="../staff/invoices/invoice_list.php"><i class="fas fa-file-invoice"></i> <span>Quản lý hóa đơn</span></a>
-                    <a href="../staff/contract/contract_list.php"><i class="fas fa-file-contract"></i> <span>Quản lý hợp đồng</span></a>
-                    <a href="../staff/room_requests/staff_request_list.php"><i class="fas fa-clipboard-check"></i> <span>Danh sách Yêu cầu đăng ký phòng</span></a>
-                    <a href="../../modules/staff/announcements/announcement_list.php" class="quick-action"><div class="action-icon"><i class="fa-solid fa-list"></i></div>
-                        <span>Danh sách Thông báo</span>
-                    </a>
-
-                </div>
-
-            </div>
-
-            <div class="action-card">
-                <h3><i class="fas fa-tasks"></i> Hành động nhanh</h3>
-                <div class="action-links">
-                    <a href="../staff/buildings/building_create.php"><i class="fas fa-building"></i> <span>Tạo tòa nhà mới</span></a>
-                    <a href="../../modules/staff/users/user_create.php"><i class="fas fa-user-plus"></i> <span>Thêm người dùng mới</span></a>
-                    <a href="../staff/students/student_create.php"><i class="fas fa-user-plus"></i> <span>Thêm sinh viên mới</span></a>
-                    <a href="../staff/rooms/room_add.php"><i class="fas fa-plus-circle"></i> <span>Thêm phòng mới</span></a>
-                    <a href="../staff/invoices/invoice_create.php"><i class="fas fa-file-invoice-dollar"></i> <span>Tạo hóa đơn mới</span></a>
-                    <a href="../staff/contract/contract_create.php"><i class="fas fa-file-signature"></i> <span>Tạo hợp đồng mới</span></a>
-                    <a href="../staff/announcements/announcement_create.php"><i class="fas fa-broadcast-tower"></i><span>Tạo thông báo mới</span></a>
-
-                </div>
-            </div>
-
-            <div class="action-card">
-                <h3><i class="fas fa-chart-line"></i> Báo cáo & Thống kê</h3>
-                <div class="action-links">
-                    <a href="../admin/report/finance_report.php"><i class="fas fa-money-bill-wave"></i> <span>Báo cáo tài chính</span></a>
-                    <a href="../../modules/staff/rooms/room_occupancy.php"><i class="fas fa-bed"></i> <span>Tỷ lệ lấp đầy phòng</span></a>
-                    <a href="../../modules/staff/feedbacks/feedback_stats.php"><i class="fas fa-chart-bar"></i> <span>Thống kê phản ánh</span></a>
-                    <a href="../../modules/staff/users/user_stats.php"><i class="fas fa-user"></i> <span>Thống kê người dùng</span></a>
-                    <a href="../../modules/staff/students/student_stats.php"><i class="fas fa-user-graduate"></i> <span>Thống kê sinh viên</span></a>
-                </div>
-            </div>
+            
         </div>
     </div>
 
     <?php include '../../includes/footer.php'; ?>
 
     <script>
-        // Thêm hiệu ứng tương tác
-        document.addEventListener('DOMContentLoaded', function() {
-            // Hiệu ứng hover cho các card
-            const cards = document.querySelectorAll('.stat-card, .action-card');
-            cards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = this.classList.contains('stat-card') ?
-                        'translateY(-8px) scale(1.02)' :
-                        'translateY(-5px) scale(1.01)';
-                });
-
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0) scale(1)';
-                });
-            });
-
-            // Hiệu ứng loading cho dữ liệu
-            const statNumbers = document.querySelectorAll('.stat-card p');
-            statNumbers.forEach(stat => {
-                const finalNumber = parseInt(stat.textContent);
-                let currentNumber = 0;
-                const increment = finalNumber / 30;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Number increment animation for metrics
+            const metricNumbers = document.querySelectorAll('.metric-number, .wqs-info .number');
+            metricNumbers.forEach(el => {
+                const text = el.textContent.trim();
+                const targetNum = parseInt(text.replace(/[^0-9]/g, ''), 10);
+                if(isNaN(targetNum) || targetNum === 0) return;
+                
+                let cur = 0;
+                const duration = 1500; // ms
+                const interval = 30; // ms
+                const step = Math.max(1, targetNum / (duration / interval));
+                
                 const timer = setInterval(() => {
-                    currentNumber += increment;
-                    if (currentNumber >= finalNumber) {
-                        currentNumber = finalNumber;
+                    cur += step;
+                    if (cur >= targetNum) {
+                        cur = targetNum;
                         clearInterval(timer);
                     }
-                    stat.textContent = Math.floor(currentNumber) + ' ' + stat.textContent.split(' ')[1];
-                }, 50);
+                    el.textContent = Math.floor(cur);
+                }, interval);
             });
+            
+            // Mouse move flare effect on welcome card
+            const banner = document.querySelector('.bento-welcome');
+            const flare = document.querySelector('.flare-effect');
+            
+            if(banner && flare) {
+                banner.addEventListener('mousemove', (e) => {
+                    const rect = banner.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    flare.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.15) 0%, transparent 50%)`;
+                });
+            }
         });
     </script>
 </body>

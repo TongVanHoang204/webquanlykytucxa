@@ -119,7 +119,7 @@ $listRes = $list->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo tài chính | KTX</title>
     <link rel="stylesheet" href="../../../assets/css/admin/report/admin_finance.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
 </head>

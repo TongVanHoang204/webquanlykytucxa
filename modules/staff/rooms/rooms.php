@@ -121,7 +121,7 @@ require_once '../../../includes/admin_header.php';
     <title>Quản lý Phòng - Ký túc xá</title>
     <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/room/staff_rooms.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>

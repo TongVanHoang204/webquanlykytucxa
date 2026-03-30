@@ -1,7 +1,7 @@
 /* Announcement List CSS */
 /* Refactored to use global.css variables */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('../../../../assets/vendor/fonts/fonts.css');
 
 /* --- Animations --- */
 /* Keeping local animations as they are specific to this page */
