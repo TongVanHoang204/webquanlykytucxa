@@ -132,6 +132,10 @@ if ($userAvatar && !empty($userAvatar)) {
                 <i class="fas fa-box"></i> Quản lý Bưu Phẩm
             </a>
 
+            <a href="<?= $base ?>modules/staff/access_card/manage.php">
+                <i class="fas fa-id-card"></i> Quản lý Thẻ Ra Vào
+            </a>
+
             <a href="<?= $base ?>index.php">
                 <i class="fas fa-house-user"></i> Trang chủ User
             </a>
@@ -212,6 +216,11 @@ if ($userAvatar && !empty($userAvatar)) {
                 <a href="<?= $base ?>modules/staff/packages/index.php" data-path="modules/staff/packages/index.php">
                     <i class="fas fa-box"></i>
                     <span>Bưu phẩm</span>
+                </a>
+
+                <a href="<?= $base ?>modules/staff/access_card/verify.php" data-path="modules/staff/access_card/verify.php">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Quét QR</span>
                 </a>
 
                 <a href="<?= $base ?>index.php" data-path="index.php">

@@ -1,1 +1,0 @@
-<?php require 'db_connect.php'; foreach(['accesscards','adminnotifications','contractlogs','faculties','roomrequests','utility_readings'] as $t){ $r=$conn->query('DESCRIBE '.$t); echo PHP_EOL.'=='$t.'=='.PHP_EOL; while($c=$r->fetch_assoc()) echo '  '.$c['Field'].' ('.$c['Type'].')'.PHP_EOL; } $conn->close();

@@ -123,6 +123,10 @@ if (!empty($_SESSION['UserID'])) {
                 <i class="fas fa-box-open"></i>
                 <span>Bưu phẩm của tôi</span>
             </a>
+            <a href="<?= $base ?>modules/user/access_card/index.php" class="<?= nav_active($base . 'modules/user/access_card/index.php') ?>">
+                <i class="fas fa-id-card"></i>
+                <span>Thẻ QR của tôi</span>
+            </a>
             <a href="<?= $base ?>modules/user/feedbacks.php" class="<?= nav_active($base . 'modules/user/feedbacks.php') ?>">
                 <i class="fas fa-comments"></i>
                 <span>Phản ánh</span>
@@ -238,6 +242,9 @@ if (!empty($_SESSION['UserID'])) {
             </a>
             <a href="<?= $base ?>modules/user/packages/index.php">
                 <i class="fas fa-box-open"></i><span>Bưu phẩm của tôi</span>
+            </a>
+            <a href="<?= $base ?>modules/user/access_card/index.php">
+                <i class="fas fa-id-card"></i><span>Thẻ QR của tôi</span>
             </a>
             <a href="<?= $base ?>modules/user/feedbacks.php">
                 <i class="fas fa-comments"></i><span>Phản ánh</span>
