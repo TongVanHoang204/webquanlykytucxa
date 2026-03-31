@@ -1,266 +1,133 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-include 'db_connect.php';
+require_once 'db_connect.php';
 
-$error   = '';
-$success = '';
-$userId  = null;
-
-$token = $_GET['token'] ?? '';
-
-// ===== 1. Kiểm tra token trong URL =====
-if (!$token) {
-    $error = "Liên kết không hợp lệ hoặc thiếu token. Vui lòng yêu cầu đặt lại mật khẩu lại từ trang Quên mật khẩu.";
-} else {
-    // ===== 2. Kiểm tra token trong database còn hạn không =====
-    $stmt = $conn->prepare("
-        SELECT pr.UserID 
-        FROM password_resets pr
-        WHERE BINARY pr.Token = ? AND pr.ExpiresAt > NOW()
-        LIMIT 1
-    ");
-
-    if ($stmt) {
-        $stmt->bind_param("s", $token);
-        $stmt->execute();
-        $res = $stmt->get_result();
-
-        if ($row = $res->fetch_assoc()) {
-            $userId = (int)$row['UserID'];
-        } else {
-            // Không có bản ghi phù hợp
-            $error = "Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ. Vui lòng gửi yêu cầu mới từ trang Quên mật khẩu.";
-        }
-        $stmt->close();
-    } else {
-        $error = "Không thể kiểm tra liên kết. Vui lòng thử lại sau.";
-    }
+// CSRF TOKEN
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+$csrf_token = $_SESSION['csrf_token'];
 
-// ===== 3. Xử lý đổi mật khẩu khi POST (và token hợp lệ) =====
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $userId !== null && empty($error)) {
-    $pw1 = $_POST['password'] ?? '';
-    $pw2 = $_POST['confirm_password'] ?? '';
+$error = '';
+$success = '';
+$oldEmail = '';
 
-    // Validation server-side
-    if ($pw1 !== $pw2) {
-        $error = "Mật khẩu xác nhận không khớp.";
-    } elseif (
-        strlen($pw1) < 8 ||
-        !preg_match('/[A-Z]/', $pw1) ||
-        !preg_match('/[a-z]/', $pw1) ||
-        !preg_match('/[0-9]/', $pw1)
-    ) {
-        $error = "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['_token'])) {
+        $error = "Yêu cầu không hợp lệ (CSRF). Vui lòng thử lại.";
     } else {
-        $hash = password_hash($pw1, PASSWORD_DEFAULT);
+        $email = trim($_POST['email'] ?? '');
+        $oldEmail = $email;
 
-        // Cập nhật mật khẩu
-        $stmt2 = $conn->prepare("UPDATE Users SET PasswordHash = ? WHERE UserID = ?");
-        if ($stmt2) {
-            $stmt2->bind_param("si", $hash, $userId);
-            if ($stmt2->execute()) {
-
-                // Xóa token đã dùng
-                $del = $conn->prepare("DELETE FROM password_resets WHERE UserID = ?");
-                if ($del) {
-                    $del->bind_param("i", $userId);
-                    $del->execute();
-                    $del->close();
-                }
-
-                $success = "Đặt lại mật khẩu thành công. Bạn có thể <a href='login.php'>đăng nhập ngay</a>.";
-            } else {
-                $error = "Không thể cập nhật mật khẩu. Vui lòng thử lại.";
-            }
-            $stmt2->close();
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = "Địa chỉ email không hợp lệ.";
         } else {
-            $error = "Không thể chuẩn bị câu lệnh cập nhật mật khẩu.";
+            // Check if email exists
+            $stmt = $conn->prepare("SELECT UserID, FullName FROM Users WHERE Email = ? LIMIT 1");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $res = $stmt->get_result();
+
+            if ($row = $res->fetch_assoc()) {
+                // Generate 6-digit OTP
+                $otp = sprintf("%06d", random_int(100000, 999999));
+                $expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+                // Upsert OTP to PasswordResets
+                $clearSt = $conn->prepare("DELETE FROM PasswordResets WHERE Email = ?");
+                $clearSt->bind_param("s", $email);
+                $clearSt->execute();
+
+                $insSt = $conn->prepare("INSERT INTO PasswordResets (Email, Token, ExpiresAt) VALUES (?, ?, ?)");
+                $insSt->bind_param("sss", $email, $otp, $expiresAt);
+                if ($insSt->execute()) {
+                    // Send Email
+                    $subject = "Mã xác nhận khôi phục mật khẩu - Ký túc xá";
+                    $message = "Xin chào " . $row['FullName'] . ",\n\n";
+                    $message .= "Bạn vừa yêu cầu khôi phục mật khẩu. Mã xác nhận (OTP) của bạn là: $otp\n\n";
+                    $message .= "Mã này sẽ hết hạn sau 15 phút.\n";
+                    $message .= "Nếu bạn không yêu cầu, vui lòng bỏ qua email này.\n\nTrân trọng,\nBQL Ký Túc Xá";
+                    $headers = "From: no-reply@ktx.edu.vn\r\n";
+                    $headers .= "Content-Type: text/plain; charset=utf-8\r\n";
+
+                    if (mail($email, $subject, $message, $headers)) {
+                        $_SESSION['reset_email'] = $email;
+                        header("Location: verify_otp.php");
+                        exit;
+                    } else {
+                        $error = "Không thể gửi email. Vui lòng kiểm tra lại cấu hình SMTP của hệ thống.";
+                        // For Laragon environments, ensure MailCatcher is enabled.
+                        error_log("OTP for $email is $otp");
+                    }
+                } else {
+                    $error = "Lỗi hệ thống khi lưu mã OTP.";
+                }
+            } else {
+                $error = "Email này không được liên kết với bất kỳ tài khoản nào.";
+            }
         }
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <meta charset="UTF-8" />
-    <title>Đặt lại mật khẩu</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="assets/css/login.css" />
-    <link rel="stylesheet" href="assets/css/auth_shell.css" />
-    <script src="https://kit.fontawesome.com/a2e0e6d10f.js" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quên mật khẩu | Ký túc xá</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/auth_bento.css">
+    <style>
+        .auth-container { max-width: 1000px; }
+        .auth-brand { background: linear-gradient(135deg, #f43f5e 0%, #8b5cf6 100%); }
+    </style>
 </head>
-
 <body>
-    <div class="auth-wrapper">
-        <div class="auth-card animate-fadeIn">
-            <div class="auth-header">
-                <h2><i class="fa-solid fa-key"></i> Đặt lại mật khẩu</h2>
-                <p>Tạo mật khẩu mới cho tài khoản của bạn.</p>
+    <div class="blob-shape blob-1" style="background:var(--gradient-warning); top:-100px; left:-100px;"></div>
+    <div class="blob-shape blob-2" style="background:var(--gradient-danger);"></div>
+
+    <div class="auth-container <?= !empty($error) ? 'animate-shake' : '' ?>">
+        <!-- Brand Side -->
+        <div class="auth-brand">
+            <div class="brand-top">
+                <div class="brand-logo" style="color:#f43f5e;"><i class="fas fa-shield-alt"></i></div>
+                <h1>Khôi phục<br>tài khoản</h1>
+                <p>Nhập email đã liên kết với tài khoản của bạn để nhận mã xác nhận bảo mật.</p>
             </div>
+            <div class="auth-footer" style="text-align:left; border:none; padding:0; margin-top:40px; color:rgba(255,255,255,0.8);">
+                <a href="login.php" style="color:#fff;"><i class="fas fa-arrow-left"></i> Quay lại đăng nhập</a>
+            </div>
+        </div>
+
+        <!-- Form Side -->
+        <div class="auth-form-wrap">
+            <h2>Quên mật khẩu?</h2>
+            <p style="margin-bottom:24px;">Đừng lo lắng, chúng tôi sẽ giúp bạn lấy lại quyền truy cập.</p>
 
             <?php if (!empty($error)): ?>
-                <div class="alert alert-error animate-shakeX">
-                    <div class="alert-title"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi</div>
-                    <p><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
-                    <?php if ($userId === null): ?>
-                        <p class="hint">
-                            <a href="forgot_password.php"><i class="fa-solid fa-unlock-keyhole"></i> Gửi lại yêu cầu quên mật khẩu</a>
-                        </p>
-                    <?php endif; ?>
+                <div class="auth-alert error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <ul><li><?= htmlspecialchars($error) ?></li></ul>
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($success)): ?>
-                <div class="alert alert-success animate-slideIn">
-                    <div class="alert-title"><i class="fa-solid fa-circle-check"></i> Thành công</div>
-                    <p><?= $success ?></p>
+            <form method="POST">
+                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                
+                <div class="form-group">
+                    <label>Địa chỉ Email</label>
+                    <div class="input-icon-wrap">
+                        <input type="email" name="email" value="<?= htmlspecialchars($oldEmail) ?>" required placeholder="VD: nguyenvanb@domain.com">
+                        <i class="fas fa-envelope icon-left"></i>
+                    </div>
                 </div>
-            <?php elseif ($userId !== null && empty($success)): ?>
 
-                <form id="resetForm" method="POST" novalidate>
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="password">Mật khẩu mới</label>
-                            <div class="input-with-icon password-wrapper">
-                                <i class="fa-solid fa-lock"></i>
-                                <input type="password" id="password" name="password" required>
-                                <button type="button" class="toggle-password" data-target="password">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-                            <div class="password-strength">
-                                <div class="strength-bar" id="passwordStrengthBar"></div>
-                            </div>
-                            <small class="hint">Ít nhất 8 ký tự, có chữ hoa, chữ thường và số.</small>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="input-group">
-                            <label for="confirm_password">Xác nhận mật khẩu</label>
-                            <div class="input-with-icon password-wrapper">
-                                <i class="fa-solid fa-lock"></i>
-                                <input type="password" id="confirm_password" name="confirm_password" required>
-                                <button type="button" class="toggle-password" data-target="confirm_password">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </div>
-                            <small id="matchMessage" class="hint"></small>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-primary">
-                        <i class="fa-solid fa-floppy-disk"></i> Cập nhật mật khẩu
-                    </button>
-
-                    <p class="auth-footer">
-                        Nhớ mật khẩu cũ?
-                        <a href="login.php"><i class="fa-solid fa-right-to-bracket"></i> Quay lại đăng nhập</a>
-                    </p>
-                </form>
-
-            <?php endif; ?>
+                <button type="submit" class="btn-submit" onclick="this.innerHTML='<span>Đang gửi...</span> <i class=\'fas fa-spinner fa-spin\'></i>'; this.style.pointerEvents='none'; this.form.submit();">
+                    <span>Gửi mã OTP</span> <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
         </div>
     </div>
-
-    <script>
-        // Toggle show/hide password
-        document.querySelectorAll('.toggle-password').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                const icon = this.querySelector('i');
-
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                }
-            });
-        });
-
-        // Password strength
-        const passwordInput = document.getElementById('password');
-        const strengthBar = document.getElementById('passwordStrengthBar');
-        const confirmInput = document.getElementById('confirm_password');
-        const matchMessage = document.getElementById('matchMessage');
-
-        function calcPasswordStrength(pw) {
-            let score = 0;
-            if (pw.length >= 8) score++;
-            if (/[A-Z]/.test(pw)) score++;
-            if (/[a-z]/.test(pw)) score++;
-            if (/[0-9]/.test(pw)) score++;
-            if (/[^A-Za-z0-9]/.test(pw)) score++;
-            return score;
-        }
-
-        if (passwordInput && strengthBar) {
-            passwordInput.addEventListener('input', function() {
-                const val = this.value;
-                const s = calcPasswordStrength(val);
-                strengthBar.className = 'strength-bar';
-                if (!val) return;
-                if (s <= 2) {
-                    strengthBar.classList.add('weak');
-                } else if (s <= 4) {
-                    strengthBar.classList.add('medium');
-                } else {
-                    strengthBar.classList.add('strong');
-                }
-                checkMatch();
-            });
-        }
-
-        function checkMatch() {
-            if (!confirmInput || !matchMessage || !passwordInput) return;
-            if (!confirmInput.value && !passwordInput.value) {
-                matchMessage.textContent = '';
-                matchMessage.classList.remove('error', 'success');
-                return;
-            }
-            if (confirmInput.value === passwordInput.value) {
-                matchMessage.textContent = '✅ Mật khẩu trùng khớp.';
-                matchMessage.classList.remove('error');
-                matchMessage.classList.add('success');
-            } else {
-                matchMessage.textContent = '❌ Mật khẩu không trùng khớp.';
-                matchMessage.classList.remove('success');
-                matchMessage.classList.add('error');
-            }
-        }
-
-        if (confirmInput) {
-            confirmInput.addEventListener('input', checkMatch);
-        }
-
-        // Client-side validation
-        const form = document.getElementById('resetForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const pw1 = passwordInput.value;
-                const pw2 = confirmInput.value;
-                let errs = [];
-
-                if (pw1.length < 8) errs.push("Mật khẩu phải có ít nhất 8 ký tự.");
-                if (!/[A-Z]/.test(pw1)) errs.push("Mật khẩu phải có chữ hoa.");
-                if (!/[a-z]/.test(pw1)) errs.push("Mật khẩu phải có chữ thường.");
-                if (!/[0-9]/.test(pw1)) errs.push("Mật khẩu phải có chữ số.");
-                if (pw1 !== pw2) errs.push("Mật khẩu xác nhận không khớp.");
-
-                if (errs.length > 0) {
-                    e.preventDefault();
-                    alert(errs.join("\\n"));
-                }
-            });
-        }
-    </script>
 </body>
-
 </html>

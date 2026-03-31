@@ -106,6 +106,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="char-counter"><span id="contentCount">0</span>/2000 ký tự</div>
       </div>
 
+      <!-- AI DRAFTING ASSISTANT BANNER -->
+      <div style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.05));border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:4px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;">
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:700;color:var(--text,#111);font-size:0.95rem;">Trợ lý AI Soạn thảo</div>
+          <div style="font-size:0.82rem;color:#6b7280;margin-top:2px;">Nhập ý chính, AI sẽ viết nội dung thông báo hoàn chỉnh cho bạn.</div>
+        </div>
+        <button type="button" onclick="openAiDraftModal()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:0.9rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+          ✨ Dùng AI Soạn Thảo
+        </button>
+      </div>
+
+
       <div class="form-group">
         <label>Tệp đính kèm (tuỳ chọn)</label>
         <div class="file-upload">
@@ -296,6 +311,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     });
   </script>
 
-</body>
+  <!-- ===== AI DRAFT MODAL ===== -->
+  <div id="aiDraftModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:20px;padding:28px;max-width:560px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,0.2);">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;">
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:1.1rem;">AI Soạn thảo Thông báo</div>
+          <div style="font-size:0.82rem;color:#6b7280;">Mô tả ý chính bạn muốn truyền đạt</div>
+        </div>
+        <button onclick="closeAiDraftModal()" style="margin-left:auto;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#6b7280;">&times;</button>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Loại thông báo</label>
+        <select id="aiDraftType" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e7eb;font-size:0.9rem;outline:none;">
+          <option value="notice">📢 Thông báo chung</option>
+          <option value="debt_reminder">💰 Nhắc nộ đóng tiền</option>
+          <option value="warning">⚠️ Cảnh cáo vi phạm</option>
+          <option value="evacuation">🚨 Thông báo khẩn</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Ý chính muốn truyền đạt <span style="color:#ef4444;">*</span></label>
+        <textarea id="aiDraftTopic" rows="3" placeholder="VD: Nhắc sinh viên tòa A chưa đóng tiền điện tháng 4..." style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e5e7eb;font-size:0.9rem;resize:vertical;outline:none;font-family:inherit;box-sizing:border-box;"></textarea>
+      </div>
+      <div id="aiDraftResult" style="display:none;background:#f9fafb;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #e5e7eb;">
+        <div style="font-size:0.75rem;font-weight:700;color:#6366f1;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">Kết quả AI tạo</div>
+        <div style="font-size:0.88rem;font-weight:700;margin-bottom:6px;" id="aiDraftGenTitle"></div>
+        <div style="font-size:0.85rem;line-height:1.7;white-space:pre-wrap;color:#374151;" id="aiDraftGenContent"></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="closeAiDraftModal()" style="padding:9px 16px;border-radius:10px;border:1.5px solid #e5e7eb;background:none;cursor:pointer;font-size:0.9rem;">Hủy</button>
+        <button onclick="generateAiDraft()" id="aiDraftGenerateBtn" style="padding:9px 20px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.9rem;">
+          <i class="fas fa-bolt"></i> Tạo nội dung
+        </button>
+        <button onclick="applyAiDraft()" id="aiDraftApplyBtn" style="display:none;padding:9px 20px;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:0.9rem;">
+          <i class="fas fa-check"></i> Áp dụng vào Form
+        </button>
+      </div>
+    </div>
+  </div>
 
-</html>
+  <script>
+    let _aiDraftData = null;
+    function openAiDraftModal() {
+      document.getElementById('aiDraftModal').style.display = 'flex';
+      document.getElementById('aiDraftResult').style.display = 'none';
+      document.getElementById('aiDraftApplyBtn').style.display = 'none';
+      document.getElementById('aiDraftTopic').focus();
+    }
+    function closeAiDraftModal() { document.getElementById('aiDraftModal').style.display = 'none'; }
+    async function generateAiDraft() {
+      const topic = document.getElementById('aiDraftTopic').value.trim();
+      const type  = document.getElementById('aiDraftType').value;
+      if (!topic) { document.getElementById('aiDraftTopic').focus(); return; }
+      const btn = document.getElementById('aiDraftGenerateBtn');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Đang tạo...';
+      try {
+        const res = await fetch('../../../modules/api/admin_ai_draft.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic, type })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Lỗi AI');
+        _aiDraftData = data.draft;
+        document.getElementById('aiDraftGenTitle').textContent = data.draft.title || '';
+        document.getElementById('aiDraftGenContent').textContent = data.draft.content || '';
+        document.getElementById('aiDraftResult').style.display = 'block';
+        document.getElementById('aiDraftApplyBtn').style.display = 'inline-block';
+      } catch(e) { alert('Lỗi AI: ' + e.message); }
+      finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rotate-right"></i> Tạo lại'; }
+    }
+    function applyAiDraft() {
+      if (!_aiDraftData) return;
+      document.getElementById('titleInput').value   = _aiDraftData.title   || '';
+      document.getElementById('contentInput').value = _aiDraftData.content || '';
+      document.getElementById('titleInput').dispatchEvent(new Event('input'));
+      document.getElementById('contentInput').dispatchEvent(new Event('input'));
+      closeAiDraftModal();
+    }
+    document.getElementById('aiDraftModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeAiDraftModal();
+    });
+  </script>
+
+</body>
+</html>

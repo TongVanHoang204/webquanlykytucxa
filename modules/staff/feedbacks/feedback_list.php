@@ -177,59 +177,66 @@ function buildImageSrc($path) {
                                 default       => 'fa-clock',
                             };
                         ?>
-                            <tr class="fb-row" style="<?= $fb['Status'] === 'Đã xử lý' ? 'opacity: 0.75; background: rgba(0,0,0,0.01);' : '' ?>">
-                                <td><span class="mod-fw-600">#<?= $fb['FeedbackID'] ?></span></td>
-                                
-                                <td>
-                                    <div class="mod-fw-600" style="color:var(--text); margin-bottom: 4px;">
-                                        <i class="fas fa-flag" style="color:var(--primary); margin-right:4px;"></i> 
-                                        <?= h($fb['Title']) ?>
-                                    </div>
-                                    <div class="mod-cell-muted text-truncate-2" style="font-size: 0.85rem; line-height: 1.5;">
-                                        <?= h($fb['Content']) ?>
-                                    </div>
-                                    <?php if ($imgSrc): ?>
-                                        <div style="margin-top: 6px;">
-                                            <a href="javascript:void(0)" onclick="openImageModal('<?= h($imgSrc) ?>')" class="mod-badge mod-badge-gray" style="text-transform:none; cursor:pointer;">
-                                                <i class="fas fa-image"></i> Đính kèm
+                                <tr class="fb-row" style="<?= $fb['Status'] === 'Đã xử lý' ? 'opacity: 0.75; background: rgba(0,0,0,0.01);' : '' ?>">
+                                    <td><span class="mod-fw-600">#<?= $fb['FeedbackID'] ?></span></td>
+                                    
+                                    <td>
+                                        <div class="mod-fw-600" style="color:var(--text); margin-bottom: 4px;">
+                                            <i class="fas fa-flag" style="color:var(--primary); margin-right:4px;"></i> 
+                                            <?= h($fb['Title']) ?>
+                                        </div>
+                                        <div class="mod-cell-muted text-truncate-2" style="font-size: 0.85rem; line-height: 1.5;">
+                                            <?= h($fb['Content']) ?>
+                                        </div>
+                                        <?php if ($imgSrc): ?>
+                                            <div style="margin-top: 6px;">
+                                                <a href="javascript:void(0)" onclick="openImageModal('<?= h($imgSrc) ?>')" class="mod-badge mod-badge-gray" style="text-transform:none; cursor:pointer;">
+                                                    <i class="fas fa-image"></i> Đính kèm
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
+                                        <!-- AI Tags display -->
+                                        <div class="ai-tags-wrap" id="aitags-<?= $fb['FeedbackID'] ?>" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;min-height:22px;">
+                                            <button onclick="analyzeTag(<?= $fb['FeedbackID'] ?>, this)" class="mod-badge" style="background:rgba(99,102,241,0.1);color:#6366f1;border:1px dashed rgba(99,102,241,0.4);cursor:pointer;font-size:0.72rem;padding:2px 7px;border-radius:99px;transition:all 0.15s;">
+                                                <i class="fas fa-wand-magic-sparkles"></i> AI Tag
+                                            </button>
+                                        </div>
+                                    </td>
+                                    
+                                    <td>
+                                        <div class="mod-cell-name"><?= h($fb['FullName']) ?></div>
+                                        <div class="mod-cell-sub"><?= h($fb['StudentCode']) ?> &bull; <?= h($fb['FacultyName'] ?: 'Chưa gán Khoa') ?></div>
+                                    </td>
+                                    
+                                    <td>
+                                        <span class="mod-badge <?= $badgeClass ?>">
+                                            <i class="fas <?= $badgeIcon ?>"></i> <?= h($fb['Status']) ?>
+                                        </span>
+                                    </td>
+                                    
+                                    <td class="mod-cell-muted">
+                                        <?= date('d/m/Y', strtotime($fb['CreatedAt'])) ?><br>
+                                        <small><?= date('H:i', strtotime($fb['CreatedAt'])) ?></small>
+                                    </td>
+                                    
+                                    <td style="text-align: center;">
+                                        <div style="display:flex; gap:6px; justify-content:center;">
+                                            <a href="feedback_resolve.php?id=<?= (int)$fb['FeedbackID'] ?>" 
+                                               class="mod-btn <?= $fb['Status'] !== 'Đã xử lý' ? 'mod-btn-primary' : 'mod-btn-outline' ?> mod-btn-sm" 
+                                               style="padding: 0 10px;"
+                                               title="<?= $fb['Status'] !== 'Đã xử lý' ? 'Xử lý' : 'Xem chi tiết' ?>">
+                                                <i class="fas <?= $fb['Status'] !== 'Đã xử lý' ? 'fa-pen' : 'fa-eye' ?>"></i>
+                                            </a>
+                                            <a href="#" data-id="<?= (int)$fb['FeedbackID'] ?>" 
+                                               class="mod-btn mod-btn-outline mod-btn-sm" 
+                                               style="padding: 0 10px; color:var(--danger); border-color:var(--danger);" 
+                                               onclick="return confirmDelete(event)" title="Xoá">
+                                                <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </div>
-                                    <?php endif; ?>
-                                </td>
-                                
-                                <td>
-                                    <div class="mod-cell-name"><?= h($fb['FullName']) ?></div>
-                                    <div class="mod-cell-sub"><?= h($fb['StudentCode']) ?> &bull; <?= h($fb['FacultyName'] ?: 'Chưa gán Khoa') ?></div>
-                                </td>
-                                
-                                <td>
-                                    <span class="mod-badge <?= $badgeClass ?>">
-                                        <i class="fas <?= $badgeIcon ?>"></i> <?= h($fb['Status']) ?>
-                                    </span>
-                                </td>
-                                
-                                <td class="mod-cell-muted">
-                                    <?= date('d/m/Y', strtotime($fb['CreatedAt'])) ?><br>
-                                    <small><?= date('H:i', strtotime($fb['CreatedAt'])) ?></small>
-                                </td>
-                                
-                                <td style="text-align: center;">
-                                    <div style="display:flex; gap:6px; justify-content:center;">
-                                        <a href="feedback_resolve.php?id=<?= (int)$fb['FeedbackID'] ?>" 
-                                           class="mod-btn <?= $fb['Status'] !== 'Đã xử lý' ? 'mod-btn-primary' : 'mod-btn-outline' ?> mod-btn-sm" 
-                                           style="padding: 0 10px;"
-                                           title="<?= $fb['Status'] !== 'Đã xử lý' ? 'Xử lý' : 'Xem chi tiết' ?>">
-                                            <i class="fas <?= $fb['Status'] !== 'Đã xử lý' ? 'fa-pen' : 'fa-eye' ?>"></i>
-                                        </a>
-                                        <a href="#" data-id="<?= (int)$fb['FeedbackID'] ?>" 
-                                           class="mod-btn mod-btn-outline mod-btn-sm" 
-                                           style="padding: 0 10px; color:var(--danger); border-color:var(--danger);" 
-                                           onclick="return confirmDelete(event)" title="Xoá">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
+
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
@@ -320,6 +327,40 @@ function confirmDelete(e) {
 }
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeImageModal(); });
+
+// ===== AI FEEDBACK SENTIMENT TAGGER =====
+async function analyzeTag(feedbackId, btn) {
+    const wrapEl = document.getElementById('aitags-' + feedbackId);
+    if (!wrapEl) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+
+    try {
+        const res = await fetch('../../../modules/api/admin_ai_feedback_tag.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feedback_id: feedbackId })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Lỗi phân tích');
+
+        const severityColors = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+        const severityLabels = { high: '🔴 Khẩn cấp', medium: '🟡 Trung bình', low: '🟢 Thấp' };
+        const sc = severityColors[data.severity] || '#6b7280';
+        const sl = severityLabels[data.severity] || data.severity;
+
+        let html = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:99px;background:${sc}15;color:${sc};font-weight:700;border:1px solid ${sc}40;">${sl}</span>`;
+        html += `<span style="font-size:0.7rem;padding:2px 8px;border-radius:99px;background:rgba(99,102,241,0.1);color:#6366f1;font-weight:600;">${data.category || ''}</span>`;
+        (data.tags || []).forEach(tag => {
+            html += `<span style="font-size:0.7rem;padding:2px 7px;border-radius:99px;background:var(--stroke,#f0f0f0);color:var(--text-secondary,#666);">#${tag}</span>`;
+        });
+        wrapEl.innerHTML = html;
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Thử lại';
+    }
+}
+
 
 <?php if (isset($_SESSION['message'])): ?>
 Swal.fire({

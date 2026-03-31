@@ -158,10 +158,19 @@ require_once '../../../includes/header.php';
 
         <!-- Actions -->
         <div class="pay-actions">
-            <?php if ($paymentMethod !== 'transfer'): ?>
+            <?php if ($paymentMethod === 'vnpay'): ?>
+                <form action="vnpay_create_payment.php" method="POST" style="flex:1;">
+                    <input type="hidden" name="invoice_id" value="<?= $invoiceID ?>">
+                    <input type="hidden" name="amount" value="<?= $invoice['TotalAmount'] ?>">
+                    <input type="hidden" name="content" value="<?= $transferContent ?>">
+                    <button type="submit" class="mod-btn mod-btn-primary" style="width: 100%; justify-content:center;">
+                        <i class="fas fa-globe"></i> Tiếp tục đến cổng VNPay
+                    </button>
+                </form>
+            <?php elseif ($paymentMethod === 'momo'): ?>
                 <form method="POST" style="flex:1;">
-                    <button type="submit" name="confirm_payment" class="mod-btn mod-btn-primary" onclick="return confirm('Xác nhận đã thanh toán?')">
-                        <i class="fas fa-check"></i> Tôi đã thanh toán
+                    <button type="submit" name="confirm_payment" class="mod-btn mod-btn-primary" onclick="return confirm('Xác nhận đã thanh toán qua MoMo?')">
+                        <i class="fas fa-check"></i> Tôi đã thanh toán MoMo
                     </button>
                 </form>
             <?php else: ?>

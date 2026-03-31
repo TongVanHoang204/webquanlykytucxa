@@ -106,7 +106,11 @@ if (!empty($_SESSION['UserID'])) {
             </a>
             <a href="<?= $base ?>modules/user/accesslogs.php" class="<?= nav_active($base . 'modules/user/accesslogs.php') ?>">
                 <i class="fas fa-newspaper"></i>
-                <span>Bảng tin</span>
+                <span>Bảng tin KTX</span>
+            </a>
+            <a href="<?= $base ?>modules/user/community/community_list.php" class="<?= nav_active($base . 'modules/user/community/community_list.php') ?>">
+                <i class="fas fa-store"></i>
+                <span>Chợ KTX</span>
             </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php" class="<?= nav_active($base . 'modules/user/rooms/rooms.php') ?>">
                 <i class="fas fa-bed"></i>
@@ -214,7 +218,10 @@ if (!empty($_SESSION['UserID'])) {
                 <i class="fas fa-user-graduate"></i><span>Trang sinh viên</span>
             </a>
             <a href="<?= $base ?>modules/user/accesslogs.php">
-                <i class="fas fa-newspaper"></i><span>Bảng tin</span>
+                <i class="fas fa-newspaper"></i><span>Bảng tin KTX</span>
+            </a>
+            <a href="<?= $base ?>modules/user/community/community_list.php">
+                <i class="fas fa-store"></i><span>Chợ KTX</span>
             </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php">
                 <i class="fas fa-bed"></i><span>Phòng ở</span>
