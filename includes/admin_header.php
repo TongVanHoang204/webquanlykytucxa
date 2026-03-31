@@ -94,6 +94,10 @@ if ($userAvatar && !empty($userAvatar)) {
                 <i class="fas fa-chart-line"></i> Dashboard Manager
             </a>
 
+            <a href="<?= $base ?>modules/admin/analytics.php">
+                <i class="fas fa-chart-pie"></i> Thống kê & Phân tích
+            </a>
+
             <?php if ($userRole !== 'Manager'): ?>
                 <a href="<?= $base ?>modules/staff/users/users.php">
                     <i class="fas fa-users"></i> Người dùng
@@ -161,6 +165,11 @@ if ($userAvatar && !empty($userAvatar)) {
                 <a href="<?= $base ?>modules/staff/dashboard.php" data-path="modules/staff/dashboard.php">
                     <i class="fas fa-chart-line"></i>
                     <span>Manager</span>
+                </a>
+
+                <a href="<?= $base ?>modules/admin/analytics.php" data-path="modules/admin/analytics.php">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Thống kê</span>
                 </a>
 
                 <?php if ($userRole !== 'Manager'): ?>
