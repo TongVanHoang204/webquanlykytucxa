@@ -120,6 +120,10 @@ if ($userAvatar && !empty($userAvatar)) {
                 <i class="fas fa-tools"></i> Bảo trì & Sửa chữa
             </a>
 
+            <a href="<?= $base ?>modules/user/forum/index.php">
+                <i class="fas fa-store"></i> Cộng đồng KTX
+            </a>
+
             <a href="<?= $base ?>index.php">
                 <i class="fas fa-house-user"></i> Trang chủ User
             </a>
@@ -185,6 +189,11 @@ if ($userAvatar && !empty($userAvatar)) {
                 <a href="<?= $base ?>modules/staff/maintenance/index.php" data-path="modules/staff/maintenance/index.php">
                     <i class="fas fa-tools"></i>
                     <span>Bảo trì</span>
+                </a>
+
+                <a href="<?= $base ?>modules/user/forum/index.php" data-path="modules/user/forum/index.php">
+                    <i class="fas fa-store"></i>
+                    <span>Cộng đồng</span>
                 </a>
 
                 <a href="<?= $base ?>index.php" data-path="index.php">
