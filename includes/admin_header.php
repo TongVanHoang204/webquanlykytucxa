@@ -116,6 +116,10 @@ if ($userAvatar && !empty($userAvatar)) {
                 <i class="fas fa-bolt"></i> Chỉ số Điện Nước
             </a>
 
+            <a href="<?= $base ?>modules/staff/maintenance/index.php">
+                <i class="fas fa-tools"></i> Bảo trì & Sửa chữa
+            </a>
+
             <a href="<?= $base ?>index.php">
                 <i class="fas fa-house-user"></i> Trang chủ User
             </a>
@@ -176,6 +180,11 @@ if ($userAvatar && !empty($userAvatar)) {
                 <a href="<?= $base ?>modules/staff/utilities/utility_list.php" data-path="modules/staff/utilities/utility_list.php">
                     <i class="fas fa-bolt"></i>
                     <span>Điện Nước</span>
+                </a>
+
+                <a href="<?= $base ?>modules/staff/maintenance/index.php" data-path="modules/staff/maintenance/index.php">
+                    <i class="fas fa-tools"></i>
+                    <span>Bảo trì</span>
                 </a>
 
                 <a href="<?= $base ?>index.php" data-path="index.php">

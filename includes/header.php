@@ -111,6 +111,10 @@ if (!empty($_SESSION['UserID'])) {
                 <i class="fas fa-bed"></i>
                 <span>Phòng đang ở</span>
             </a>
+            <a href="<?= $base ?>modules/user/maintenance/index.php" class="<?= nav_active($base . 'modules/user/maintenance/index.php') ?>">
+                <i class="fas fa-tools"></i>
+                <span>Bảo trì & Sửa chữa</span>
+            </a>
             <a href="<?= $base ?>modules/user/feedbacks.php" class="<?= nav_active($base . 'modules/user/feedbacks.php') ?>">
                 <i class="fas fa-comments"></i>
                 <span>Phản ánh</span>
@@ -217,6 +221,9 @@ if (!empty($_SESSION['UserID'])) {
             </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php">
                 <i class="fas fa-bed"></i><span>Phòng ở</span>
+            </a>
+            <a href="<?= $base ?>modules/user/maintenance/index.php">
+                <i class="fas fa-tools"></i><span>Bảo trì & Sửa chữa</span>
             </a>
             <a href="<?= $base ?>modules/user/feedbacks.php">
                 <i class="fas fa-comments"></i><span>Phản ánh</span>

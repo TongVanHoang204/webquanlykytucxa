@@ -200,60 +200,66 @@ if ($studentId <= 0) {
       </div>
     </div>
 
-    <!-- Menu chính -->
-    <div class="dashboard-grid">
-      <a href="/modules/user/feedbacks.php" class="dashboard-card">
-        <div class="icon-box"><i class="fas fa-comment-dots"></i></div>
-        <h3>Gửi phản ánh</h3>
-        <p>Gửi ý kiến, phản ánh về phòng ở hoặc cơ sở vật chất.</p>
-      </a>
+    <!-- Menu chính và Hoạt động gần đây (Bố cục 2 cột) -->
+    <div class="dashboard-main-content">
+      <div class="dashboard-nav-section">
+        <div class="dashboard-grid">
+          <a href="/modules/user/feedbacks.php" class="dashboard-card">
+            <div class="icon-box"><i class="fas fa-comment-dots"></i></div>
+            <h3>Gửi phản ánh</h3>
+            <p>Gửi ý kiến, phản ánh về phòng ở hoặc cơ sở vật chất.</p>
+          </a>
 
-      <a href="/modules/user/bills/bills.php" class="dashboard-card">
-        <div class="icon-box"><i class="fas fa-file-invoice-dollar"></i></div>
-        <h3>Hóa đơn & Thanh toán</h3>
-        <p>Xem chi tiết các khoản phí và lịch sử thanh toán của bạn.</p>
-      </a>
+          <a href="/modules/user/bills/bills.php" class="dashboard-card">
+            <div class="icon-box"><i class="fas fa-file-invoice-dollar"></i></div>
+            <h3>Hóa đơn & Thanh toán</h3>
+            <p>Xem chi tiết các khoản phí và lịch sử thanh toán của bạn.</p>
+          </a>
 
-      <a href="/modules/user/rooms/rooms.php" class="dashboard-card">
-        <div class="icon-box"><i class="fas fa-bed"></i></div>
-        <h3>Phòng ở của tôi</h3>
-        <p>Thông tin hợp đồng, bạn cùng phòng và trạng thái phòng hiện tại.</p>
-      </a>
+          <a href="/modules/user/rooms/rooms.php" class="dashboard-card">
+            <div class="icon-box"><i class="fas fa-bed"></i></div>
+            <h3>Phòng ở của tôi</h3>
+            <p>Thông tin hợp đồng, bạn cùng phòng và trạng thái phòng hiện tại.</p>
+          </a>
 
-      <a href="/modules/user/accesslogs.php" class="dashboard-card">
-        <div class="icon-box"><i class="fas fa-bullhorn"></i></div>
-        <h3>Thông báo</h3>
-        <p>Xem các thông báo mới nhất từ ban quản lý ký túc xá.</p>
-      </a>
-    </div>
-
-    <!-- Hoạt động gần đây -->
-    <?php if ($recentActivities instanceof mysqli_result && $recentActivities->num_rows > 0): ?>
-      <div class="recent-activity">
-        <div class="activity-header">
-          <h3><i class="fas fa-history"></i> Hoạt động gần đây</h3>
+          <a href="/modules/user/accesslogs.php" class="dashboard-card">
+            <div class="icon-box"><i class="fas fa-bullhorn"></i></div>
+            <h3>Thông báo</h3>
+            <p>Xem các thông báo mới nhất từ ban quản lý ký túc xá.</p>
+          </a>
         </div>
-        <div class="activity-list">
-          <?php while ($activity = $recentActivities->fetch_assoc()): ?>
-            <div class="activity-item">
-              <div class="activity-icon" style="background: <?= $activity['type'] == 'invoice' ? '#ff6b6b' : '#4ecdc4' ?>;">
-                <i class="fas fa-<?= $activity['type'] == 'invoice' ? 'file-invoice-dollar' : 'comment-dots' ?>"></i>
-              </div>
-              <div class="activity-content">
-                <p><?= htmlspecialchars($activity['title']) ?></p>
-                <div class="activity-time">
-                  <?= date('H:i d/m/Y', strtotime($activity['date'])) ?>
-                </div>
-              </div>
+      </div>
+
+      <div class="dashboard-side-section">
+        <!-- Hoạt động gần đây -->
+        <?php if ($recentActivities instanceof mysqli_result && $recentActivities->num_rows > 0): ?>
+          <div class="recent-activity">
+            <div class="activity-header">
+              <h3><i class="fas fa-history"></i> Hoạt động gần đây</h3>
             </div>
-          <?php endwhile; ?>
-        </div>
+            <div class="activity-list">
+              <?php while ($activity = $recentActivities->fetch_assoc()): ?>
+                <div class="activity-item">
+                  <div class="activity-icon" style="background: <?= $activity['type'] == 'invoice' ? 'linear-gradient(135deg, #ff6b6b, #ee5a52)' : 'linear-gradient(135deg, #4ecdc4, #44a08d)' ?>;">
+                    <i class="fas fa-<?= $activity['type'] == 'invoice' ? 'file-invoice-dollar' : 'comment-dots' ?>"></i>
+                  </div>
+                  <div class="activity-content">
+                    <p><?= htmlspecialchars($activity['title']) ?></p>
+                    <div class="activity-time">
+                      <?= date('H:i d/m/Y', strtotime($activity['date'])) ?>
+                    </div>
+                  </div>
+                </div>
+              <?php endwhile; ?>
+            </div>
+          </div>
+        <?php else: ?>
+          <div class="no-activity">
+            <i class="fas fa-info-circle"></i> Chưa có hoạt động nào gần đây.
+          </div>
+        <?php endif; ?>
       </div>
-    <?php else: ?>
-      <div class="no-activity">
-        <i class="fas fa-info-circle"></i> Chưa có hoạt động nào gần đây.
-      </div>
-    <?php endif; ?>
+    </div>
   </div>
 
   <?php include '../../includes/footer.php'; ?>
