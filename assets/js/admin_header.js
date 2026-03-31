@@ -1,310 +1,302 @@
 /**
- * Admin Header Logic
- * Handles navigation, notifications, theme toggle, and UI interactions.
+ * Admin shell interactions with websocket-aware notifications.
+ * Keeps the existing dropdown, drawer and theme behaviors
+ * while upgrading notifications from polling-only to realtime-first.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Globals
-    const body = document.body;
-    const header = document.querySelector('.admin-header');
-    
-    // Get Base URL from a data attribute on the header or body, fallback to '/'
-    const baseUrl = document.body.dataset.base || '/';
+  const body = document.body;
+  const header = document.querySelector('.admin-header');
+  const baseUrl = body.dataset.base || '/';
 
-    /* =========================================
-       1. NAVIGATION ACTIVE STATE & UNDERLINE
-       ========================================= */
-    const nav = document.querySelector('.admin-nav');
-    const underline = document.querySelector('.nav-underline');
+  const nav = document.querySelector('.admin-nav');
+  const underline = document.querySelector('.nav-underline');
+  const profile = document.querySelector('.admin-profile');
+  const hamburger = document.querySelector('.hamburger');
+  const drawer = document.querySelector('.drawer');
+  const overlay = document.querySelector('.drawer-overlay');
+  const themeBtn = document.querySelector('.theme-toggle');
+  const notifyWrap = document.querySelector('.notify');
+  const THEME_KEY = 'ktx_theme';
 
-    if (nav && underline) {
-        const links = [...nav.querySelectorAll('a[data-path]')];
-        // Normalize current path by removing leading slash
-        const currentPath = window.location.pathname.replace(/^\/+/, '');
-        
-        // Find active link: either exact match or starts with (for nested pages)
-        // Adjust logic to be robust for subdirectory deployments
-        let activeLink = links.find(a => {
-            const path = a.dataset.path; // e.g., modules/staff/dashboard.php
-            return currentPath.endsWith(path);
-        });
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
-        // Fallback: Check if any part of the path matches (simplified)
-        if (!activeLink && links.length > 0) {
-            // Default checking logic if strict match fails (optional)
-        }
+  function applyTheme(theme) {
+    body.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }
 
-        if (activeLink) {
-            activeLink.classList.add('active');
-            moveUnderline(activeLink);
-        }
-
-        function moveUnderline(el) {
-            if (!el) {
-                underline.style.width = '0';
-                return;
-            }
-            const linkRect = el.getBoundingClientRect();
-            const navRect = nav.getBoundingClientRect();
-            
-            const left = linkRect.left - navRect.left;
-            const width = linkRect.width;
-
-            underline.style.left = `${left}px`;
-            underline.style.width = `${width}px`;
-        }
-
-        // Update on resize
-        window.addEventListener('resize', () => {
-            if (activeLink) moveUnderline(activeLink);
-        });
-        
-        // Hover effect (optional: move underline on hover)
-        links.forEach(link => {
-            link.addEventListener('mouseenter', () => moveUnderline(link));
-        });
-        nav.addEventListener('mouseleave', () => {
-            if (activeLink) moveUnderline(activeLink);
-            else underline.style.width = '0';
-        });
+  function moveUnderline(activeLink) {
+    if (!nav || !underline || !activeLink) {
+      if (underline) {
+        underline.style.width = '0';
+      }
+      return;
     }
 
-    /* =========================================
-       2. USER DROPDOWN
-       ========================================= */
-    const profile = document.querySelector('.admin-profile');
-    if (profile) {
-        const btn = profile.querySelector('.profile-btn');
-        const menu = profile.querySelector('.dropdown-menu');
+    const navRect = nav.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    underline.style.left = `${linkRect.left - navRect.left}px`;
+    underline.style.width = `${linkRect.width}px`;
+  }
 
-        if (btn && menu) {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                menu.classList.toggle('show');
-                const isExpanded = menu.classList.contains('show');
-                btn.setAttribute('aria-expanded', isExpanded);
-            });
+  if (nav && underline) {
+    const links = [...nav.querySelectorAll('a[data-path]')];
+    const currentPath = window.location.pathname.replace(/^\/+/, '');
+    const activeLink = links.find((link) => currentPath.endsWith(link.dataset.path || ''));
 
-            // Close on click outside
-            window.addEventListener('click', (e) => {
-                if (!profile.contains(e.target)) {
-                    menu.classList.remove('show');
-                    btn.setAttribute('aria-expanded', 'false');
-                }
-            });
-        }
+    if (activeLink) {
+      activeLink.classList.add('active');
+      moveUnderline(activeLink);
     }
 
-    /* =========================================
-       3. MOBILE DRAWER / HAMBURGER
-       ========================================= */
-    const hamburger = document.querySelector('.hamburger');
-    const drawer = document.querySelector('.drawer');
-    const overlay = document.querySelector('.drawer-overlay'); // Optional overlay
+    window.addEventListener('resize', () => moveUnderline(activeLink));
+    links.forEach((link) => {
+      link.addEventListener('mouseenter', () => moveUnderline(link));
+    });
+    nav.addEventListener('mouseleave', () => moveUnderline(activeLink));
+  }
 
-    if (hamburger && drawer) {
-        const toggleDrawer = () => {
-            hamburger.classList.toggle('active');
-            drawer.classList.toggle('open');
-            body.classList.toggle('no-scroll', drawer.classList.contains('open'));
-        };
+  if (profile) {
+    const btn = profile.querySelector('.profile-btn');
+    const menu = profile.querySelector('.dropdown-menu');
+    if (btn && menu) {
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const show = !menu.classList.contains('show');
+        menu.classList.toggle('show', show);
+        btn.setAttribute('aria-expanded', String(show));
+      });
 
-        hamburger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDrawer();
-        });
+      window.addEventListener('click', (event) => {
+        if (!profile.contains(event.target)) {
+          menu.classList.remove('show');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+  }
 
-        // Close when clicking outside (window click)
-        window.addEventListener('click', (e) => {
-            if (drawer.classList.contains('open') && 
-                !drawer.contains(e.target) && 
-                !hamburger.contains(e.target)) {
-                toggleDrawer();
-            }
-        });
-        
-        // Close on clean escape
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && drawer.classList.contains('open')) {
-                toggleDrawer();
-            }
-        });
+  if (hamburger && drawer) {
+    const setDrawerOpen = (open) => {
+      hamburger.classList.toggle('active', open);
+      drawer.classList.toggle('open', open);
+      overlay?.classList.toggle('open', open);
+      body.classList.toggle('no-scroll', open);
+    };
+
+    hamburger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setDrawerOpen(!drawer.classList.contains('open'));
+    });
+
+    overlay?.addEventListener('click', () => setDrawerOpen(false));
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && drawer.classList.contains('open')) {
+        setDrawerOpen(false);
+      }
+    });
+    window.addEventListener('click', (event) => {
+      if (drawer.classList.contains('open') && !drawer.contains(event.target) && !hamburger.contains(event.target)) {
+        setDrawerOpen(false);
+      }
+    });
+  }
+
+  applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+  themeBtn?.addEventListener('click', () => {
+    applyTheme(body.dataset.theme === 'dark' ? 'light' : 'dark');
+  });
+
+  if (header) {
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 10);
+    });
+  }
+
+  if (!notifyWrap) {
+    return;
+  }
+
+  const notifyBtn = notifyWrap.querySelector('.notify-btn');
+  const notifyMenu = notifyWrap.querySelector('.notify-menu');
+  const notifyList = notifyWrap.querySelector('.notify-list');
+  const notifyDot = notifyWrap.querySelector('.dot');
+  const markReadBtn = notifyWrap.querySelector('.mark-read');
+
+  let isOpen = false;
+  let socket = null;
+  let reconnectTimer = null;
+
+  function formatTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value || '';
+    }
+    return date.toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  function normalizeResponse(payload) {
+    if (Array.isArray(payload)) {
+      const unreadCount = payload.filter((item) => Number(item.IsRead) === 0).length;
+      return { items: payload, unreadCount };
     }
 
-    /* =========================================
-       4. THEME TOGGLE
-       ========================================= */
-    // Logic: Check localStorage -> Apply class/attribute -> Save
-    const themeBtn = document.querySelector('.theme-toggle');
-    const THEME_KEY = 'ktx_theme';
-    
-    function applyTheme(theme) {
-        body.dataset.theme = theme;
-        localStorage.setItem(THEME_KEY, theme);
-        
-        // Update icons if needed (handled by CSS usually via opacity)
+    return {
+      items: Array.isArray(payload?.items) ? payload.items : [],
+      unreadCount: Number(payload?.unreadCount || 0),
+    };
+  }
+
+  function renderNotifications(items, unreadCount) {
+    if (!items.length) {
+      notifyList.innerHTML = '<li class="empty">Chưa có thông báo mới</li>';
+      notifyDot.hidden = true;
+      return;
     }
 
-    // Init
-    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
-    applyTheme(savedTheme);
+    notifyList.innerHTML = items.slice(0, 8).map((item) => {
+      const unread = Number(item.IsRead) === 0;
+      const linkButton = item.Link
+        ? `<button class="notify-view" type="button" data-link="${escapeHtml(item.Link)}">Xem</button>`
+        : '';
 
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            const current = body.dataset.theme === 'dark' ? 'dark' : 'light';
-            const next = current === 'dark' ? 'light' : 'dark';
-            applyTheme(next);
-        });
+      return `
+        <li class="notify-item${unread ? ' unread' : ''}" data-id="${item.NotificationID}">
+          <div class="notify-icon"><i class="fa-regular fa-bell"></i></div>
+          <div class="notify-content">
+            <div class="notify-title">${escapeHtml(item.Title)}</div>
+            <div class="notify-message">${escapeHtml(item.Message)}</div>
+            <div class="notify-meta">
+              <span class="notify-time">${escapeHtml(formatTime(item.CreatedAt))}</span>
+              ${linkButton}
+            </div>
+          </div>
+        </li>
+      `;
+    }).join('');
+
+    notifyDot.hidden = unreadCount === 0;
+
+    notifyList.querySelectorAll('.notify-view').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const link = button.dataset.link;
+        if (link) {
+          window.location.href = link;
+        }
+      });
+    });
+  }
+
+  async function fetchNotifications() {
+    try {
+      const response = await fetch(`${baseUrl}modules/api/get_notifications.php`, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const { items, unreadCount } = normalizeResponse(payload);
+      renderNotifications(items, unreadCount);
+    } catch (error) {
+      notifyList.innerHTML = '<li class="empty">Không tải được thông báo</li>';
+      console.warn('wave1 admin notifications failed:', error);
+    }
+  }
+
+  async function markNotificationsRead(notificationId = null) {
+    const response = await fetch(`${baseUrl}modules/api/mark_read_notifications.php`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(notificationId ? { notification_id: notificationId } : { mark_all: true }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    /* =========================================
-       5. HEADER SHADOW ON SCROLL
-       ========================================= */
-    if (header) {
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 10) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-        });
+    await response.json();
+    await fetchNotifications();
+  }
+
+  async function connectRealtime() {
+    try {
+      const response = await fetch(`${baseUrl}modules/api/realtime_token.php`, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok || !payload?.token || !payload?.wsUrl) {
+        throw new Error(payload?.error || 'Realtime unavailable');
+      }
+
+      socket = new WebSocket(`${payload.wsUrl}?token=${encodeURIComponent(payload.token)}`);
+      socket.addEventListener('message', () => {
+        fetchNotifications().catch(console.warn);
+      });
+      socket.addEventListener('close', () => {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = window.setTimeout(connectRealtime, 5000);
+      });
+      socket.addEventListener('error', () => {
+        socket?.close();
+      });
+    } catch (error) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = window.setTimeout(connectRealtime, 5000);
+      console.warn('wave1 admin realtime unavailable:', error);
     }
+  }
 
-    /* =========================================
-       6. REAL-TIME NOTIFICATIONS
-       ========================================= */
-    const notifyWrap = document.querySelector('.notify');
-    if (notifyWrap) {
-        const notifyBtn = notifyWrap.querySelector('.notify-btn');
-        const notifyMenu = notifyWrap.querySelector('.notify-menu');
-        const notifyList = notifyWrap.querySelector('.notify-list');
-        const notifyDot = notifyWrap.querySelector('.dot');
-        const markReadBtn = notifyWrap.querySelector('.mark-read');
-
-        let isNotifyOpen = false;
-
-        // Toggle Menu
-        notifyBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            isNotifyOpen = !isNotifyOpen;
-            notifyMenu.classList.toggle('show', isNotifyOpen);
-            
-            if (isNotifyOpen) {
-                // Determine logic: Mark read immediately or on explicit action?
-                // User requirement: usually explicit or "Mark All Read" button.
-                // Current logic from previous code: Mark all read when opened?
-                // Improved: Keep 'unread' state until clicked or 'Mark all read' action.
-                // But for simplicity of UX, usually opening = checked.
-                markAllAsRead(); 
-            }
-        });
-
-        // Close on outside click
-        window.addEventListener('click', (e) => {
-            if (isNotifyOpen && !notifyWrap.contains(e.target)) {
-                isNotifyOpen = false;
-                notifyMenu.classList.remove('show');
-            }
-        });
-
-        if (markReadBtn) {
-            markReadBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                markAllAsRead();
-            });
-        }
-
-        // Fetch Logic
-        async function fetchNotifications() {
-            try {
-                // Adjust path based on baseUrl
-                const apiUrl = `${baseUrl}modules/api/get_notifications.php`;
-                const res = await fetch(apiUrl, { cache: 'no-store' });
-                if (!res.ok) throw new Error('Network response was not ok');
-                
-                const data = await res.json();
-                renderNotifications(data);
-            } catch (err) {
-                console.warn('Failed to fetch notifications:', err);
-                notifyList.innerHTML = '<li class="empty"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi tải thông báo</li>';
-            }
-        }
-
-        async function markAllAsRead() {
-            try {
-                const apiUrl = `${baseUrl}modules/api/mark_read_notifications.php`;
-                await fetch(apiUrl, { method: 'POST' });
-                // Re-fetch to update UI (remove unread classes)
-                fetchNotifications();
-            } catch (err) {
-                console.error('Error marking read:', err);
-            }
-        }
-
-        function renderNotifications(data) {
-            if (!data || data.length === 0) {
-                notifyList.innerHTML = '<li class="empty">Chưa có thông báo mới</li>';
-                notifyDot.hidden = true;
-                return;
-            }
-
-            // Deduplicate logic
-            const unique = [];
-            const seen = new Set();
-            data.forEach(item => {
-                // Robust ID checking
-                const id = item.NotificationID || item.id || item.Id || `${item.Title}_${item.CreatedAt}`;
-                if (!seen.has(id)) {
-                    seen.add(id);
-                    unique.push(item);
-                }
-            });
-
-            let unreadCount = 0;
-            const fragment = document.createDocumentFragment();
-
-            unique.forEach(n => {
-                const isUnread = (Number(n.IsRead) === 0);
-                if (isUnread) unreadCount++;
-
-                const li = document.createElement('li');
-                li.className = `notify-item ${isUnread ? 'unread' : ''}`;
-                
-                // Format relative time or absolute
-                const timeStr = new Date(n.CreatedAt).toLocaleString('vi-VN', {
-                    hour: '2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'
-                });
-
-                li.innerHTML = `
-                    <div class="notify-icon"><i class="fa-regular fa-bell"></i></div>
-                    <div class="notify-content">
-                        <div class="notify-title">${escapeHtml(n.Title)}</div>
-                        <div class="notify-message">${escapeHtml(n.Message)}</div>
-                        <div class="notify-meta">
-                            <span class="notify-time">${timeStr}</span>
-                        </div>
-                    </div>
-                `;
-                fragment.appendChild(li);
-            });
-
-            notifyList.innerHTML = '';
-            notifyList.appendChild(fragment);
-            notifyDot.hidden = (unreadCount === 0);
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;")
-                       .replace(/</g, "&lt;")
-                       .replace(/>/g, "&gt;")
-                       .replace(/"/g, "&quot;")
-                       .replace(/'/g, "&#039;");
-        }
-
-        // Init
-        fetchNotifications();
-        // Poll every 60s
-        setInterval(fetchNotifications, 60000);
+  notifyBtn?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    isOpen = !isOpen;
+    notifyMenu?.classList.toggle('show', isOpen);
+    if (isOpen) {
+      markNotificationsRead().catch(console.warn);
     }
+  });
+
+  markReadBtn?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    markNotificationsRead().catch(console.warn);
+  });
+
+  document.addEventListener('click', (event) => {
+    if (isOpen && !notifyWrap.contains(event.target)) {
+      isOpen = false;
+      notifyMenu?.classList.remove('show');
+    }
+  });
+
+  window.addEventListener('wave1:notification-refresh', () => {
+    fetchNotifications().catch(console.warn);
+  });
+
+  fetchNotifications().catch(console.warn);
+  connectRealtime().catch(console.warn);
+  window.setInterval(() => {
+    fetchNotifications().catch(console.warn);
+  }, 60000);
 });

@@ -275,6 +275,15 @@ require_once '../../includes/admin_header.php';
                 </div>
             </div>
         </div>
+        <div class="mod-card" style="margin-top: 24px; padding: 24px;">
+            <h3 style="margin-top: 0;"><i class="fas fa-rocket"></i> Wave 1</h3>
+            <div class="module-list-links">
+                <a href="<?= $base ?>modules/staff/communications/mass_email.php" class="list-item hover-glass"><i class="fas fa-envelope-open-text"></i> Mass Email</a>
+                <a href="<?= $base ?>modules/staff/report/report_hub.php" class="list-item hover-glass"><i class="fas fa-file-export"></i> Export báo cáo</a>
+                <a href="<?= $base ?>modules/staff/access/gate_scanner.php" class="list-item hover-glass"><i class="fas fa-qrcode"></i> Quét cổng</a>
+                <a href="<?= $base ?>modules/staff/access/gate_logs.php" class="list-item hover-glass"><i class="fas fa-door-open"></i> Nhật ký ra/vào</a>
+            </div>
+        </div>
     </div>
 
     <script>

@@ -308,6 +308,16 @@ require_once '../../includes/admin_header.php';
         </div>
     </div>
 
+    <div class="mod-card" style="margin-top: 24px; padding: 24px;">
+        <h3 style="margin-top: 0;"><i class="fas fa-rocket"></i> Wave 1</h3>
+        <div class="module-grid-links">
+            <a href="../../modules/staff/communications/mass_email.php" class="bento-btn"><i class="fas fa-envelope-open-text"></i> Mass Email</a>
+            <a href="../../modules/staff/report/report_hub.php" class="bento-btn"><i class="fas fa-file-export"></i> Export báo cáo</a>
+            <a href="../../modules/staff/access/gate_scanner.php" class="bento-btn"><i class="fas fa-qrcode"></i> Quét cổng</a>
+            <a href="../../modules/staff/access/gate_logs.php" class="bento-btn"><i class="fas fa-door-open"></i> Nhật ký ra/vào</a>
+        </div>
+    </div>
+
     <?php include '../../includes/footer.php'; ?>
 
     <script>

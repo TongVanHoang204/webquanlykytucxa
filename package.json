@@ -2,16 +2,18 @@
     "name": "WEBQuanLyKyTucXa",
     "version": "1.0.0",
     "type": "module",
-    "main": "server.js",
+    "main": "assets/js/server.js",
     "scripts": {
-        "start": "node server.js",
-        "web": "node web-server.js"
+        "start": "node assets/js/server.js",
+        "web": "node web-server.js",
+        "test:wave1": "node tests/wave1/notification_realtime_contract.test.mjs && node tests/wave1/email_report_contract.test.mjs && node tests/wave1/gate_qr_contract.test.mjs"
     },
     "dependencies": {
         "@google/genai": "^1.30.0",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^5.1.0",
-        "mysql2": "^3.15.3"
+        "mysql2": "^3.15.3",
+        "ws": "^8.18.3"
     }
 }

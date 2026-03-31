@@ -146,6 +146,9 @@ $listRes = $list->get_result();
                         <i class="fas fa-table"></i> CSV tháng
                     </button>
                 </form>
+                <a href="<?= $base ?>modules/staff/report/report_hub.php?report_key=finance_detail" class="mod-btn mod-btn-outline mod-btn-sm">
+                    <i class="fas fa-file-export"></i> Trung tâm export mới
+                </a>
                 <button class="mod-btn mod-btn-ghost mod-btn-sm" onclick="window.print()">
                     <i class="fas fa-print"></i> In
                 </button>
