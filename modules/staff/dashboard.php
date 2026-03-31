@@ -257,18 +257,127 @@ require_once '../../includes/admin_header.php';
                 </a>
             </div>
         </div>
+
+        <!-- ==================== CHARTS SECTION ==================== -->
+        <?php
+        // Chart data cho Staff Dashboard
+        $sChartRoles = ['Admin' => 0, 'Manager' => 0, 'Student' => 0];
+        $rc = $conn->query("SELECT Role, COUNT(*) cnt FROM users GROUP BY Role");
+        while ($r = $rc->fetch_assoc()) $sChartRoles[$r['Role']] = (int)$r['cnt'];
+
+        $sInvLabels = []; $sInvPaid = []; $sInvUnpaid = [];
+        for ($i = 4; $i >= 0; $i--) {
+            $m = date('m', strtotime("-$i months"));
+            $y = date('Y', strtotime("-$i months"));
+            $sInvLabels[] = date('m/Y', strtotime("-$i months"));
+            $p = $conn->query("SELECT COUNT(*) c FROM invoices WHERE MONTH(CreatedAt)=$m AND YEAR(CreatedAt)=$y AND Status='Đã thanh toán'");
+            $u = $conn->query("SELECT COUNT(*) c FROM invoices WHERE MONTH(CreatedAt)=$m AND YEAR(CreatedAt)=$y AND Status='Chưa thanh toán'");
+            $sInvPaid[]   = (int)($p ? $p->fetch_assoc()['c'] : 0);
+            $sInvUnpaid[] = (int)($u ? $u->fetch_assoc()['c'] : 0);
+        }
+
+        $sRoomLabels = []; $sRoomData = [];
+        $rr = $conn->query("SELECT Status, COUNT(*) cnt FROM rooms GROUP BY Status");
+        while ($r = $rr->fetch_assoc()) { $sRoomLabels[] = $r['Status']; $sRoomData[] = (int)$r['cnt']; }
+        ?>
+        <div class="dashboard-container" style="padding:0 30px 40px;">
+            <h2 style="font-size:1.3rem; font-weight:700; color:var(--text); margin-bottom:18px; display:flex; align-items:center; gap:10px;">
+                <span style="background:linear-gradient(135deg,#4361ee,#7209b7); width:34px; height:34px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:0.95rem; flex-shrink:0;">
+                    <i class="fas fa-chart-bar"></i>
+                </span> Biểu đồ phân tích
+            </h2>
+            <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:18px;">
+
+                <!-- Phân bổ vai trò -->
+                <div style="background:var(--card); border:1px solid var(--stroke); border-radius:14px; padding:18px;">
+                    <h3 style="font-size:0.9rem; font-weight:600; color:var(--text); margin:0 0 14px; display:flex; align-items:center; gap:7px;">
+                        <i class="fas fa-users" style="color:#4361ee;"></i> Phân bổ vai trò
+                    </h3>
+                    <div style="height:200px; position:relative;"><canvas id="sRoleChart"></canvas></div>
+                </div>
+
+                <!-- Hóa đơn 5 tháng -->
+                <div style="background:var(--card); border:1px solid var(--stroke); border-radius:14px; padding:18px;">
+                    <h3 style="font-size:0.9rem; font-weight:600; color:var(--text); margin:0 0 14px; display:flex; align-items:center; gap:7px;">
+                        <i class="fas fa-file-invoice" style="color:#10b981;"></i> Hóa đơn 5 tháng gần nhất
+                    </h3>
+                    <div style="height:200px; position:relative;"><canvas id="sInvChart"></canvas></div>
+                </div>
+
+                <!-- Trạng thái phòng -->
+                <div style="background:var(--card); border:1px solid var(--stroke); border-radius:14px; padding:18px;">
+                    <h3 style="font-size:0.9rem; font-weight:600; color:var(--text); margin:0 0 14px; display:flex; align-items:center; gap:7px;">
+                        <i class="fas fa-building" style="color:#f59e0b;"></i> Tình trạng phòng
+                    </h3>
+                    <div style="height:200px; position:relative;"><canvas id="sRoomChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <!-- END CHARTS -->
     </div>
 
-
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // Animation thẻ thống kê
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.stat-card').forEach((el, i) => {
                 el.style.animationDelay = `${i * 0.1}s`;
             });
+
+            const isDark = () => document.body.getAttribute('data-theme') === 'dark';
+            const gridC  = () => isDark() ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+            const tickC  = () => isDark() ? '#94a3b8' : '#6b7280';
+            const legC   = () => isDark() ? '#e2e8f0' : '#374151';
+            const tip    = { backgroundColor: isDark() ? '#1e293b' : '#fff', titleColor: isDark() ? '#e2e8f0' : '#111', bodyColor: isDark() ? '#94a3b8' : '#555', borderColor: isDark() ? '#334155' : '#e5e7eb', borderWidth: 1, padding: 10, cornerRadius: 8 };
+
+            Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+
+            // 1. Role polar/pie chart
+            new Chart(document.getElementById('sRoleChart').getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: ['Admin', 'Manager', 'Student'],
+                    datasets: [{ data: [<?= $sChartRoles['Admin'] ?>, <?= $sChartRoles['Manager'] ?>, <?= $sChartRoles['Student'] ?>], backgroundColor: ['#4361ee', '#7c3aed', '#10b981'], borderWidth: 0, hoverOffset: 8 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: legC(), padding: 10, font: { size: 11 } } }, tooltip: tip }
+                }
+            });
+
+            // 2. Invoice grouped bar
+            new Chart(document.getElementById('sInvChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: <?= json_encode($sInvLabels) ?>,
+                    datasets: [
+                        { label: 'Đã thanh toán', data: <?= json_encode($sInvPaid) ?>,   backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: 'Chưa TT',        data: <?= json_encode($sInvUnpaid) ?>, backgroundColor: '#f59e0b', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { color: legC(), font: { size: 11 } } }, tooltip: tip },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: tickC(), font: { size: 10 } } },
+                        y: { grid: { color: gridC() }, ticks: { color: tickC(), precision: 0 } }
+                    }
+                }
+            });
+
+            // 3. Room doughnut
+            new Chart(document.getElementById('sRoomChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: <?= json_encode($sRoomLabels) ?>,
+                    datasets: [{ data: <?= json_encode($sRoomData) ?>, backgroundColor: ['#4361ee','#10b981','#f59e0b','#6b7280','#ef4444'], borderWidth: 0, hoverOffset: 6 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: { legend: { position: 'bottom', labels: { color: legC(), padding: 8, font: { size: 11 } } }, tooltip: tip }
+                }
+            });
         });
     </script>
 </body>
-
-</html>
+</html>
