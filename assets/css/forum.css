@@ -1,0 +1,342 @@
+/* Forum (Chợ Sinh Viên) CSS */
+
+:root {
+    --f-primary: #4361ee;
+    --f-primary-hover: #3a56d4;
+    --f-bg: #f0f2f5; /* Màu nền giống fb */
+    --f-card: #ffffff;
+    --f-text: #050505;
+    --f-muted: #65676b;
+    --f-border: #ced0d4;
+    --f-hover: #f2f2f2;
+    --f-radius: 8px;
+    --f-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+    --f-bg: #18191a;
+    --f-card: #242526;
+    --f-text: #e4e6eb;
+    --f-muted: #b0b3b8;
+    --f-border: #3e4042;
+    --f-hover: #3a3b3c;
+    --f-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+body {
+    background-color: var(--f-bg);
+}
+
+.forum-wrapper {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 10px;
+}
+
+/* ---------------- CREATE POST CARD ---------------- */
+.create-post-card {
+    background: var(--f-card);
+    border-radius: var(--f-radius);
+    padding: 15px;
+    box-shadow: var(--f-shadow);
+    margin-bottom: 20px;
+}
+
+.create-post-header {
+    display: flex;
+    gap: 10px;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ccc;
+}
+
+.create-post-input {
+    flex: 1;
+    background: var(--f-hover);
+    border-radius: 20px;
+    padding: 10px 15px;
+    cursor: pointer;
+    color: var(--f-muted);
+    line-height: 20px;
+    transition: background 0.2s;
+}
+
+.create-post-input:hover {
+    background: var(--f-border);
+}
+
+/* Modal Create Post */
+#createPostModal .modal-content-forum {
+    background: var(--f-card);
+    width: 100%;
+    max-width: 500px;
+    margin: 5% auto;
+    border-radius: var(--f-radius);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    position: relative;
+    color: var(--f-text);
+}
+
+.modal-header-forum {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid var(--f-border);
+    font-weight: bold;
+    font-size: 1.25rem;
+    position: relative;
+}
+
+.modal-close-forum {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    background: var(--f-hover);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--f-text);
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.modal-body-forum {
+    padding: 15px;
+}
+
+.modal-body-forum textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--f-text);
+    font-size: 1.1rem;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    min-height: 100px;
+    margin-top: 10px;
+}
+
+.upload-preview {
+    margin-top: 10px;
+    max-height: 200px;
+    overflow: hidden;
+    border-radius: var(--f-radius);
+    display: none;
+}
+.upload-preview img {
+    width: 100%;
+    height: auto;
+}
+
+.modal-actions-forum {
+    padding: 15px;
+    border-top: 1px solid var(--f-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.image-upload-btn {
+    color: #45bd62; /* Màu xanh lá upload fb */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--f-radius);
+    font-weight: 500;
+}
+.image-upload-btn:hover { background: var(--f-hover); }
+
+.btn-post {
+    padding: 8px 30px;
+    background: var(--f-primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-post:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---------------- POST CARD ---------------- */
+.post-card {
+    background: var(--f-card);
+    border-radius: var(--f-radius);
+    box-shadow: var(--f-shadow);
+    margin-bottom: 20px;
+    color: var(--f-text);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    gap: 10px;
+    position: relative;
+}
+
+.post-meta {
+    flex: 1;
+}
+
+.post-author {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--f-text);
+    text-decoration: none;
+}
+.post-author:hover { text-decoration: underline; }
+
+.post-time {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--f-muted);
+}
+
+.post-options {
+    color: var(--f-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+}
+.post-options:hover { background: var(--f-hover); }
+
+.post-content {
+    padding: 0 15px 10px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.post-image {
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    border-top: 1px solid var(--f-border);
+    border-bottom: 1px solid var(--f-border);
+}
+
+/* Post Stats (Likes, Comments counts) */
+.post-stats {
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--f-muted);
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--f-border);
+}
+
+/* Actions (Like, Comment btns) */
+.post-actions {
+    display: flex;
+    padding: 4px 15px;
+    border-bottom: 1px solid var(--f-border);
+}
+
+.action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 0;
+    color: var(--f-muted);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--f-hover);
+}
+
+.action-btn.liked {
+    color: var(--f-primary);
+}
+
+/* Comments Section */
+.post-comments {
+    padding: 10px 15px;
+    background: var(--f-card); /* Hoặc hơi xám nhẹ tùy ý */
+    border-bottom-left-radius: var(--f-radius);
+    border-bottom-right-radius: var(--f-radius);
+}
+
+.comment-input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.comment-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--f-hover);
+    border-radius: 20px;
+    padding: 0 12px;
+}
+.comment-input-wrapper input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    color: var(--f-text);
+    outline: none;
+}
+.comment-input-wrapper button {
+    background: transparent;
+    border: none;
+    color: var(--f-primary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px;
+}
+
+/* Comment List */
+.comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.comment-item {
+    display: flex;
+    gap: 10px;
+}
+.comment-body {
+    background: var(--f-hover);
+    padding: 8px 12px;
+    border-radius: 18px;
+    max-width: 100%;
+}
+.comment-author {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--f-text);
+    display: block;
+}
+.comment-text {
+    font-size: 0.9rem;
+    color: var(--f-text);
+    line-height: 1.4;
+}
+.comment-time {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--f-muted);
+    margin-left: 12px;
+    margin-top: 2px;
+}

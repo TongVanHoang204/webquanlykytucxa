@@ -117,9 +117,25 @@ if ($isLoggedIn && $role === 'Student' && isset($conn) && $conn instanceof mysql
                 <i class="fas fa-store"></i>
                 <span>Chợ KTX</span>
             </a>
+            <a href="<?= $base ?>modules/user/forum/index.php" class="<?= nav_active($base . 'modules/user/forum/index.php') ?>">
+                <i class="fas fa-users"></i>
+                <span>Cá»™ng Ä‘á»“ng SV</span>
+            </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php" class="<?= nav_active($base . 'modules/user/rooms/rooms.php') ?>">
                 <i class="fas fa-bed"></i>
                 <span>Phòng đang ở</span>
+            </a>
+            <a href="<?= $base ?>modules/user/maintenance/index.php" class="<?= nav_active($base . 'modules/user/maintenance/index.php') ?>">
+                <i class="fas fa-tools"></i>
+                <span>Báº£o trÃ¬</span>
+            </a>
+            <a href="<?= $base ?>modules/user/packages/index.php" class="<?= nav_active($base . 'modules/user/packages/index.php') ?>">
+                <i class="fas fa-box-open"></i>
+                <span>BÆ°u pháº©m</span>
+            </a>
+            <a href="<?= $base ?>modules/user/access_card/index.php" class="<?= nav_active($base . 'modules/user/access_card/index.php') ?>">
+                <i class="fas fa-id-card"></i>
+                <span>Tháº» ra/vÃ o</span>
             </a>
             <a href="<?= $base ?>modules/user/feedbacks.php" class="<?= nav_active($base . 'modules/user/feedbacks.php') ?>">
                 <i class="fas fa-comments"></i>
@@ -224,8 +240,20 @@ if ($isLoggedIn && $role === 'Student' && isset($conn) && $conn instanceof mysql
             <a href="<?= $base ?>modules/user/community/community_list.php">
                 <i class="fas fa-store"></i><span>Chợ KTX</span>
             </a>
+            <a href="<?= $base ?>modules/user/forum/index.php">
+                <i class="fas fa-users"></i><span>Cá»™ng Ä‘á»“ng SV</span>
+            </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php">
                 <i class="fas fa-bed"></i><span>Phòng ở</span>
+            </a>
+            <a href="<?= $base ?>modules/user/maintenance/index.php">
+                <i class="fas fa-tools"></i><span>Báº£o trÃ¬</span>
+            </a>
+            <a href="<?= $base ?>modules/user/packages/index.php">
+                <i class="fas fa-box-open"></i><span>BÆ°u pháº©m</span>
+            </a>
+            <a href="<?= $base ?>modules/user/access_card/index.php">
+                <i class="fas fa-id-card"></i><span>Tháº» ra/vÃ o</span>
             </a>
             <a href="<?= $base ?>modules/user/feedbacks.php">
                 <i class="fas fa-comments"></i><span>Phản ánh</span>

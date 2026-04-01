@@ -82,21 +82,39 @@ body[data-theme="dark"] .student-dashboard {
 }
 
 
-/* ===== GRID 4 THẺ MENU CHÍNH ===== */
+/* ===== LAYOUT CỘT CHÍNH ===== */
 
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+.dashboard-main-content {
+    display: flex;
     gap: 2rem;
     max-width: 1400px;
     margin: 0 auto 3rem;
+    align-items: flex-start;
+}
+
+.dashboard-nav-section {
+    flex: 2;
+}
+
+.dashboard-side-section {
+    flex: 1;
+    position: sticky;
+    top: 2rem;
+}
+
+/* ===== GRID THẺ MENU CHÍNH ===== */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
 }
 
 .dashboard-card {
     background: var(--card);
     border-radius: 20px;
-    padding: 2.5rem 2rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+    padding: 2rem 1.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
@@ -108,7 +126,6 @@ body[data-theme="dark"] .student-dashboard {
     text-decoration: none;
     cursor: pointer;
 }
-
 
 /* Gradient border animation */
 
@@ -123,21 +140,20 @@ body[data-theme="dark"] .student-dashboard {
     z-index: -1;
 }
 
-
 /* Glow effect */
 
 .dashboard-card::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient( circle at center, rgba(59, 130, 246, 0.15), transparent 70%);
+    background: radial-gradient( circle at center, rgba(59, 130, 246, 0.1), transparent 70%);
     opacity: 0;
     transition: opacity 0.4s ease;
 }
 
 .dashboard-card:hover {
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 60px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 20px 60px rgba(59, 130, 246, 0.15);
     border-color: transparent;
 }
 
@@ -149,14 +165,13 @@ body[data-theme="dark"] .student-dashboard {
     opacity: 1;
 }
 
-
 /* Icon lớn ở trên cùng */
 
 .icon-box {
     position: relative;
     z-index: 1;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: linear-gradient(135deg, rgba(39, 159, 251, 0.1), rgba(184, 143, 255, 0.1));
     display: flex;
@@ -164,11 +179,11 @@ body[data-theme="dark"] .student-dashboard {
     justify-content: center;
     margin-bottom: 1.5rem;
     transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    box-shadow: 0 8px 25px rgba(244, 248, 255, 0.15);
+    box-shadow: 0 8px 25px rgba(244, 248, 255, 0.05);
 }
 
 .icon-box i {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     background: linear-gradient(135deg, var(--brand), var(--brand-2));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -178,8 +193,8 @@ body[data-theme="dark"] .student-dashboard {
 
 .dashboard-card:hover .icon-box {
     background: linear-gradient(135deg, var(--brand), var(--brand-2));
-    transform: scale(1.15) rotate(10deg);
-    box-shadow: 0 15px 40px rgba(204, 222, 251, 0.4);
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 15px 40px rgba(204, 222, 251, 0.2);
 }
 
 .dashboard-card:hover .icon-box i {
@@ -187,14 +202,13 @@ body[data-theme="dark"] .student-dashboard {
     transform: scale(1.1);
 }
 
-
 /* Tiêu đề và mô tả */
 
 .dashboard-card h3 {
-    font-size: 1.3rem;
-    margin: 0 0 0.8rem;
+    font-size: 1.2rem;
+    margin: 0 0 0.6rem;
     color: var(--text);
-    font-weight: 500;
+    font-weight: 600;
     position: relative;
     z-index: 1;
     transition: color 0.3s ease;
@@ -210,8 +224,8 @@ body[data-theme="dark"] .student-dashboard {
 .dashboard-card p {
     margin: 0;
     color: var(--muted);
-    font-size: 0.95rem;
-    line-height: 1.6;
+    font-size: 0.9rem;
+    line-height: 1.5;
     position: relative;
     z-index: 1;
     transition: color 0.3s ease;
@@ -220,7 +234,6 @@ body[data-theme="dark"] .student-dashboard {
 .dashboard-card:hover p {
     color: var(--text);
 }
-
 
 /* Màu riêng cho từng card */
 
@@ -256,23 +269,33 @@ body[data-theme="dark"] .student-dashboard {
     background: linear-gradient(135deg, #4895ef, #3b82f6);
 }
 
-
 /* Responsive */
+
+@media (max-width: 992px) {
+    .dashboard-main-content {
+        flex-direction: column;
+    }
+    .dashboard-side-section {
+        width: 100%;
+        position: static;
+    }
+}
 
 @media (max-width: 768px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
     .dashboard-card {
-        padding: 2rem 1.5rem;
+        padding: 1.5rem 1.25rem;
     }
     .icon-box {
-        width: 75px;
-        height: 75px;
+        width: 50px;
+        height: 50px;
+        margin-bottom: 1rem;
     }
     .icon-box i {
-        font-size: 2rem;
+        font-size: 1.5rem;
     }
 }
 

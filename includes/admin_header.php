@@ -76,6 +76,28 @@ if (!empty($userAvatar)) {
             <i class="fas fa-building"></i> <span>Ký túc xá</span>
         </div>
         <nav class="drawer-nav">
+            <a href="<?= $base ?>modules/admin/analytics.php">
+                <i class="fas fa-chart-pie"></i> PhÃ¢n tÃ­ch
+            </a>
+            <a href="<?= $base ?>modules/staff/payments/payment_list.php">
+                <i class="fas fa-money-check-alt"></i> Thanh toÃ¡n
+            </a>
+            <a href="<?= $base ?>modules/staff/utilities/utility_list.php">
+                <i class="fas fa-bolt"></i> Äiá»‡n nÆ°á»›c
+            </a>
+            <a href="<?= $base ?>modules/staff/maintenance/index.php">
+                <i class="fas fa-tools"></i> Báº£o trÃ¬
+            </a>
+            <a href="<?= $base ?>modules/staff/packages/index.php">
+                <i class="fas fa-box"></i> BÆ°u pháº©m
+            </a>
+            <a href="<?= $base ?>modules/staff/access_card/manage.php">
+                <i class="fas fa-id-card"></i> Tháº» ra/vÃ o
+            </a>
+            <a href="<?= $base ?>modules/user/forum/index.php">
+                <i class="fas fa-store"></i> Cá»™ng Ä‘á»“ng
+            </a>
+
             <?php if ($userRole !== 'Manager'): ?>
                 <a href="<?= $base ?>modules/admin/dashboard.php">
                     <i class="fas fa-gauge-high"></i> Dashboard Admin
@@ -132,6 +154,35 @@ if (!empty($userAvatar)) {
             </a>
 
             <nav class="admin-nav">
+                <a href="<?= $base ?>modules/admin/analytics.php" data-path="modules/admin/analytics.php">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>PhÃ¢n tÃ­ch</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/payments/payment_list.php" data-path="modules/staff/payments/payment_list.php">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span>Thanh toÃ¡n</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/utilities/utility_list.php" data-path="modules/staff/utilities/utility_list.php">
+                    <i class="fas fa-bolt"></i>
+                    <span>Äiá»‡n nÆ°á»›c</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/maintenance/index.php" data-path="modules/staff/maintenance/index.php">
+                    <i class="fas fa-tools"></i>
+                    <span>Báº£o trÃ¬</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/packages/index.php" data-path="modules/staff/packages/index.php">
+                    <i class="fas fa-box"></i>
+                    <span>BÆ°u pháº©m</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/access_card/manage.php" data-path="modules/staff/access_card/manage.php">
+                    <i class="fas fa-id-card"></i>
+                    <span>Tháº» ra/vÃ o</span>
+                </a>
+                <a href="<?= $base ?>modules/user/forum/index.php" data-path="modules/user/forum/index.php">
+                    <i class="fas fa-store"></i>
+                    <span>Cá»™ng Ä‘á»“ng</span>
+                </a>
+
                 <?php if ($userRole !== 'Manager'): ?>
                     <a href="<?= $base ?>modules/admin/dashboard.php" data-path="modules/admin/dashboard.php">
                         <i class="fas fa-gauge-high"></i>
