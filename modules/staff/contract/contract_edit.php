@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 requireRole(['Admin']);
 
 /* ================== HÀM DÙNG CHUNG ================== */
@@ -249,6 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 syncStudentDormStatus($conn, $studentId);
 
                 $conn->commit();
+                logContractAction(
+                    $conn,
+                    $_SESSION['UserID'] ?? null,
+                    'update',
+                    "Cáº­p nháº­t há»£p Ä‘á»“ng #{$contractId} cho StudentID={$studentId}, RoomID={$newRoomId}",
+                    'activity'
+                );
 
                 unset($_SESSION['_csrf']);
                 $_SESSION['message'] = '✅ Cập nhật hợp đồng thành công!';
@@ -287,7 +295,7 @@ require_once '../../../includes/admin_header.php';
     <link rel="stylesheet" href="/assets/css/staff/contract/staff_contract_create.css">
     <link rel="icon" href="/assets/img/favicon.ico">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />

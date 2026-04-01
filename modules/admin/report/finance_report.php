@@ -5,21 +5,18 @@ include '../../../includes/admin_header.php';
 include '../../../includes/auth_check.php';
 requireRole(['Admin']);
 
-// --- Helper function ---
 function money_vn($n)
 {
     return number_format((float)$n, 0, ',', '.') . ' ₫';
 }
 
-// --- Lọc ---
-$range   = $_GET['range']   ?? 'year';  // 'month','year','custom'
-$status  = $_GET['status']  ?? 'all';   // 'all','Đã thanh toán','Chưa thanh toán','Quá hạn'
+$range   = $_GET['range']   ?? 'year';
+$status  = $_GET['status']  ?? 'all';
 $from    = $_GET['from']    ?? date('Y-m-01');
 $to      = $_GET['to']      ?? date('Y-m-t');
 $year    = intval($_GET['year'] ?? date('Y'));
-$month   = $_GET['month']   ?? date('Y-m'); // yyyy-mm
+$month   = $_GET['month']   ?? date('Y-m');
 
-// Chuẩn hoá khoảng thời gian theo phạm vi
 if ($range === 'month') {
     $from = date('Y-m-01', strtotime($month . '-01'));
     $to   = date('Y-m-t',  strtotime($month . '-01'));
@@ -28,7 +25,6 @@ if ($range === 'month') {
     $to   = "$year-12-31";
 }
 
-// --- Điều kiện WHERE chung ---
 $where = "i.CreatedAt BETWEEN ? AND ?";
 $params = [$from . " 00:00:00", $to . " 23:59:59"];
 $types  = "ss";
@@ -39,7 +35,6 @@ if ($status !== 'all') {
     $types   .= "s";
 }
 
-// --- KPI tổng quan ---
 $kpiSql = "
   SELECT
     SUM(CASE WHEN i.Status='Đã thanh toán' THEN i.TotalAmount ELSE 0 END) AS total_paid,
@@ -54,7 +49,6 @@ $kpi->bind_param($types, ...$params);
 $kpi->execute();
 $kpiRes = $kpi->get_result()->fetch_assoc() ?: ['total_paid' => 0, 'total_unpaid' => 0, 'total_overdue' => 0, 'invoice_count' => 0];
 
-// --- Series theo tháng (12 cột: Paid/Unpaid) cho năm được chọn (để vẽ biểu đồ) ---
 $seriesYear = $year;
 $seriesSql = "
   SELECT i.Month, i.Year,
@@ -75,7 +69,6 @@ while ($row = $r->fetch_assoc()) {
     $series[$m] = ['paid' => (float)$row['paid'], 'unpaid' => (float)$row['unpaid']];
 }
 
-// --- Top nợ (top 10 sinh viên nợ nhiều nhất trong khoảng lọc) ---
 $debtSql = "
   SELECT s.FullName, s.StudentCode,
          SUM(i.TotalAmount) AS debt
@@ -92,7 +85,6 @@ $debt->bind_param($types, ...$params);
 $debt->execute();
 $debtRes = $debt->get_result();
 
-// --- Bảng chi tiết hoá đơn theo lọc ---
 $listSql = "
   SELECT i.InvoiceID, i.Month, i.Year, i.TotalAmount, i.Status,
          i.CreatedAt, i.DueDate, i.PaidAt,
@@ -118,177 +110,209 @@ $listRes = $list->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo tài chính | KTX</title>
-    <link rel="stylesheet" href="../../../assets/css/admin/report/admin_finance.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/modules_shared.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <style>
+        .chart-container { position: relative; height: 360px; }
+    </style>
 </head>
 
 <body>
-    <div class="wrap">
+    <div class="mod-container">
         <!-- Header -->
-        <div class="page-header">
-            <h2><i class="fas fa-chart-line"></i> Báo cáo tài chính</h2>
-            <div class="export">
-                <form method="get" action="finance_export_csv.php" class="export-form">
+        <div class="mod-header">
+            <div class="mod-header-left">
+                <h2><i class="fas fa-chart-line"></i> Báo cáo tài chính</h2>
+            </div>
+            <div class="mod-header-right">
+                <form method="get" action="finance_export_csv.php" style="display:inline;">
                     <input type="hidden" name="range" value="<?= htmlspecialchars($range) ?>">
                     <input type="hidden" name="status" value="<?= htmlspecialchars($status) ?>">
                     <input type="hidden" name="from" value="<?= htmlspecialchars($from) ?>">
                     <input type="hidden" name="to" value="<?= htmlspecialchars($to) ?>">
                     <input type="hidden" name="year" value="<?= htmlspecialchars($year) ?>">
                     <input type="hidden" name="month" value="<?= htmlspecialchars($month) ?>">
-                    <button type="submit" class="btn primary" id="exportDetail">
-                        <i class="fas fa-file-csv"></i> Xuất CSV chi tiết
+                    <button type="submit" class="mod-btn mod-btn-primary mod-btn-sm" id="exportDetail">
+                        <i class="fas fa-file-csv"></i> CSV chi tiết
                     </button>
                 </form>
-                <form method="get" action="finance_export_csv.php" class="export-form">
+                <form method="get" action="finance_export_csv.php" style="display:inline;">
                     <input type="hidden" name="summary" value="1">
                     <input type="hidden" name="year" value="<?= htmlspecialchars($seriesYear) ?>">
-                    <button type="submit" class="btn secondary" id="exportSummary">
-                        <i class="fas fa-table"></i> CSV theo tháng
+                    <button type="submit" class="mod-btn mod-btn-outline mod-btn-sm" id="exportSummary">
+                        <i class="fas fa-table"></i> CSV tháng
                     </button>
                 </form>
-                <button class="btn" onclick="window.print()">
-                    <i class="fas fa-print"></i> In báo cáo
+                <a href="<?= $base ?>modules/staff/report/report_hub.php?report_key=finance_detail" class="mod-btn mod-btn-outline mod-btn-sm">
+                    <i class="fas fa-file-export"></i> Trung tâm export mới
+                </a>
+                <button class="mod-btn mod-btn-ghost mod-btn-sm" onclick="window.print()">
+                    <i class="fas fa-print"></i> In
                 </button>
             </div>
         </div>
 
         <!-- Filters -->
-        <form class="filters" method="get" id="filterForm">
-            <div class="row">
-                <label for="range"><i class="fas fa-calendar-alt"></i> Phạm vi thời gian</label>
-                <select name="range" id="range" onchange="toggleDateInputs()">
+        <form class="mod-filters" method="get" id="filterForm">
+            <div class="mod-filter-group">
+                <label><i class="fas fa-calendar-alt"></i> Phạm vi</label>
+                <select name="range" id="range" class="mod-select" onchange="toggleDateInputs()">
                     <option value="month" <?= $range === 'month' ? 'selected' : ''; ?>>Theo tháng</option>
                     <option value="year" <?= $range === 'year' ? 'selected' : ''; ?>>Theo năm</option>
                     <option value="custom" <?= $range === 'custom' ? 'selected' : ''; ?>>Tuỳ chọn</option>
                 </select>
             </div>
 
-            <div class="row" id="monthInput" style="display: <?= $range === 'month' ? 'block' : 'none' ?>">
-                <label for="month"><i class="fas fa-calendar-day"></i> Chọn tháng</label>
-                <input type="month" name="month" id="month" value="<?= htmlspecialchars(date('Y-m', strtotime($from))) ?>">
+            <div class="mod-filter-group" id="monthInput" style="display: <?= $range === 'month' ? 'flex' : 'none' ?>">
+                <label><i class="fas fa-calendar-day"></i> Tháng</label>
+                <input type="month" name="month" id="month" class="mod-input" value="<?= htmlspecialchars(date('Y-m', strtotime($from))) ?>">
             </div>
 
-            <div class="row" id="yearInput" style="display: <?= $range === 'year' ? 'block' : 'none' ?>">
-                <label for="year"><i class="fas fa-calendar-week"></i> Chọn năm</label>
-                <select name="year" id="year">
+            <div class="mod-filter-group" id="yearInput" style="display: <?= $range === 'year' ? 'flex' : 'none' ?>">
+                <label><i class="fas fa-calendar-week"></i> Năm</label>
+                <select name="year" id="year" class="mod-select">
                     <?php for ($y = date('Y') - 2; $y <= date('Y') + 1; $y++): ?>
                         <option value="<?= $y ?>" <?= $y == $year ? 'selected' : ''; ?>>Năm <?= $y ?></option>
                     <?php endfor; ?>
                 </select>
             </div>
 
-            <div class="row" id="customInput" style="display: <?= $range === 'custom' ? 'block' : 'none' ?>">
-                <label for="from"><i class="fas fa-calendar"></i> Từ ngày</label>
-                <input type="date" name="from" id="from" value="<?= htmlspecialchars($from) ?>">
-                <label for="to" style="margin-top: 8px;">Đến ngày</label>
-                <input type="date" name="to" id="to" value="<?= htmlspecialchars($to) ?>">
+            <div class="mod-filter-group" id="customInput" style="display: <?= $range === 'custom' ? 'flex' : 'none' ?>; flex-direction:column;">
+                <label><i class="fas fa-calendar"></i> Từ ngày</label>
+                <input type="date" name="from" id="from" class="mod-input" value="<?= htmlspecialchars($from) ?>">
+                <label style="margin-top:8px;"><i class="fas fa-calendar-check"></i> Đến ngày</label>
+                <input type="date" name="to" id="to" class="mod-input" value="<?= htmlspecialchars($to) ?>">
             </div>
 
-            <div class="row">
-                <label for="status"><i class="fas fa-filter"></i> Trạng thái</label>
-                <select name="status" id="status">
-                    <option value="all" <?= $status === 'all' ? 'selected' : ''; ?>>Tất cả trạng thái</option>
+            <div class="mod-filter-group">
+                <label><i class="fas fa-filter"></i> Trạng thái</label>
+                <select name="status" id="status" class="mod-select">
+                    <option value="all" <?= $status === 'all' ? 'selected' : ''; ?>>Tất cả</option>
                     <option value="Đã thanh toán" <?= $status === 'Đã thanh toán' ? 'selected' : ''; ?>>Đã thanh toán</option>
                     <option value="Chưa thanh toán" <?= $status === 'Chưa thanh toán' ? 'selected' : ''; ?>>Chưa thanh toán</option>
                     <option value="Quá hạn" <?= $status === 'Quá hạn' ? 'selected' : ''; ?>>Quá hạn</option>
                 </select>
             </div>
 
-            <div class="row">
-                <button type="submit">
-                    <i class="fas fa-filter"></i> Áp dụng bộ lọc
+            <div class="mod-filter-group" style="flex:0; min-width:auto;">
+                <label>&nbsp;</label>
+                <button type="submit" class="mod-btn mod-btn-primary mod-btn-sm">
+                    <i class="fas fa-filter"></i> Lọc
                 </button>
             </div>
         </form>
 
-        <!-- KPIs -->
-        <div class="kpis">
-            <div class="kpi">
-                <div class="label"><i class="fas fa-check-circle"></i> Đã thu</div>
-                <div class="val"><?= money_vn($kpiRes['total_paid'] ?? 0) ?></div>
-                <div class="trend" style="color: var(--success); font-size: 0.9rem; margin-top: 8px;">
-                    <i class="fas fa-arrow-up"></i> Hoàn thành
+        <!-- KPI Cards -->
+        <div class="mod-stats mod-stagger">
+            <div class="mod-stat accent-green">
+                <div class="mod-stat-icon" style="background:var(--gradient-success);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= money_vn($kpiRes['total_paid'] ?? 0) ?></span>
+                    <span class="mod-stat-label">Đã thu</span>
                 </div>
             </div>
-            <div class="kpi">
-                <div class="label"><i class="fas fa-clock"></i> Chưa thu</div>
-                <div class="val"><?= money_vn($kpiRes['total_unpaid'] ?? 0) ?></div>
-                <div class="trend" style="color: var(--warning); font-size: 0.9rem; margin-top: 8px;">
-                    <i class="fas fa-exclamation-triangle"></i> Đang chờ
+            <div class="mod-stat accent-blue">
+                <div class="mod-stat-icon" style="background:var(--gradient-primary);">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= money_vn($kpiRes['total_unpaid'] ?? 0) ?></span>
+                    <span class="mod-stat-label">Chưa thu</span>
                 </div>
             </div>
-            <div class="kpi">
-                <div class="label"><i class="fas fa-exclamation-triangle"></i> Quá hạn</div>
-                <div class="val"><?= money_vn($kpiRes['total_overdue'] ?? 0) ?></div>
-                <div class="trend" style="color: var(--danger); font-size: 0.9rem; margin-top: 8px;">
-                    <i class="fas fa-arrow-down"></i> Cần xử lý
+            <div class="mod-stat accent-pink">
+                <div class="mod-stat-icon" style="background:var(--gradient-warning);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= money_vn($kpiRes['total_overdue'] ?? 0) ?></span>
+                    <span class="mod-stat-label">Quá hạn</span>
                 </div>
             </div>
-            <div class="kpi">
-                <div class="label"><i class="fas fa-receipt"></i> Tổng hoá đơn</div>
-                <div class="val"><?= (int)($kpiRes['invoice_count'] ?? 0) ?></div>
-                <div class="trend" style="color: var(--primary); font-size: 0.9rem; margin-top: 8px;">
-                    <i class="fas fa-chart-bar"></i> Tổng số
+            <div class="mod-stat accent-purple">
+                <div class="mod-stat-icon" style="background:var(--gradient-info);">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= (int)($kpiRes['invoice_count'] ?? 0) ?></span>
+                    <span class="mod-stat-label">Tổng hoá đơn</span>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid">
-            <!-- Biểu đồ -->
-            <div class="card">
-                <h3><i class="fas fa-chart-column"></i> Thu/Chưa thu theo tháng (<?= $seriesYear ?>)</h3>
-                <div class="chart-container">
-                    <canvas id="monthlyChart"></canvas>
+        <!-- 2-Column: Chart + Top Debt -->
+        <div class="mod-grid-2" style="align-items:start;">
+            <!-- Chart -->
+            <div class="mod-card">
+                <div class="mod-card-header">
+                    <div class="mod-card-title"><i class="fas fa-chart-column"></i> Thu/Chưa thu (<?= $seriesYear ?>)</div>
+                </div>
+                <div class="mod-card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
             </div>
 
             <!-- Top nợ -->
-            <div class="card">
-                <h3><i class="fas fa-user-minus"></i> Top 10 nợ cao nhất</h3>
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Sinh viên</th>
-                                <th>Số nợ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if ($debtRes->num_rows > 0): ?>
-                                <?php while ($d = $debtRes->fetch_assoc()): ?>
+            <div class="mod-card">
+                <div class="mod-card-header">
+                    <div class="mod-card-title"><i class="fas fa-user-minus"></i> Top 10 nợ cao nhất</div>
+                </div>
+                <div class="mod-card-body" style="padding:0;">
+                    <div class="mod-table-scroll" style="max-height:400px;">
+                        <table class="mod-table">
+                            <thead>
+                                <tr>
+                                    <th>Sinh viên</th>
+                                    <th style="text-align:right;">Số nợ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if ($debtRes->num_rows > 0): ?>
+                                    <?php while ($d = $debtRes->fetch_assoc()): ?>
+                                        <tr>
+                                            <td>
+                                                <div class="mod-cell-name"><?= htmlspecialchars($d['FullName']) ?></div>
+                                                <div class="mod-cell-sub"><?= htmlspecialchars($d['StudentCode']) ?></div>
+                                            </td>
+                                            <td style="text-align:right;">
+                                                <span class="mod-badge mod-badge-red">
+                                                    <?= money_vn($d['debt']) ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
                                     <tr>
-                                        <td>
-                                            <strong><?= htmlspecialchars($d['FullName']) ?></strong>
-                                            <br>
-                                            <small style="color: var(--gray);"><?= htmlspecialchars($d['StudentCode']) ?></small>
-                                        </td>
-                                        <td>
-                                            <strong style="color: var(--danger);"><?= money_vn($d['debt']) ?></strong>
+                                        <td colspan="2">
+                                            <div class="mod-empty" style="padding:40px;">
+                                                <i class="fas fa-inbox"></i>
+                                                <p>Không có dữ liệu nợ</p>
+                                            </div>
                                         </td>
                                     </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="2" style="text-align: center; color: var(--gray);">
-                                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                                        Không có dữ liệu nợ trong khoảng lọc
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Bảng chi tiết -->
-        <div class="card">
-            <h3><i class="fas fa-receipt"></i> Chi tiết hoá đơn</h3>
-            <div style="overflow: auto; max-height: 600px;">
-                <table>
+        <!-- Bảng chi tiết hoá đơn -->
+        <div class="mod-card">
+            <div class="mod-card-header">
+                <div class="mod-card-title"><i class="fas fa-receipt"></i> Chi tiết hoá đơn</div>
+                <span class="mod-badge mod-badge-gray"><?= $listRes->num_rows ?> bản ghi</span>
+            </div>
+            <div class="mod-table-scroll" style="max-height:600px;">
+                <table class="mod-table">
                     <thead>
                         <tr>
                             <th>Mã HĐ</th>
@@ -297,8 +321,8 @@ $listRes = $list->get_result();
                             <th>Tổng tiền</th>
                             <th>Trạng thái</th>
                             <th>Ngày tạo</th>
-                            <th>Hạn thanh toán</th>
-                            <th>Ngày thanh toán</th>
+                            <th>Hạn TT</th>
+                            <th>Ngày TT</th>
                             <th>Tháng/Năm</th>
                         </tr>
                     </thead>
@@ -306,46 +330,53 @@ $listRes = $list->get_result();
                         <?php if ($listRes->num_rows > 0): ?>
                             <?php while ($row = $listRes->fetch_assoc()): ?>
                                 <?php
-                                $statusClass = $row['Status'] === 'Đã thanh toán' ? 'paid' : ($row['Status'] === 'Quá hạn' ? 'overdue' : 'unpaid');
+                                $sBadge = match($row['Status']) {
+                                    'Đã thanh toán'  => 'mod-badge-emerald',
+                                    'Quá hạn'        => 'mod-badge-red',
+                                    default           => 'mod-badge-amber',
+                                };
+                                $sIcon = match($row['Status']) {
+                                    'Đã thanh toán'  => 'fa-check',
+                                    'Quá hạn'        => 'fa-exclamation-triangle',
+                                    default           => 'fa-clock',
+                                };
                                 ?>
                                 <tr>
-                                    <td><strong>#<?= $row['InvoiceID'] ?></strong></td>
+                                    <td><span class="mod-fw-600">#<?= $row['InvoiceID'] ?></span></td>
                                     <td>
-                                        <strong><?= htmlspecialchars($row['FullName']) ?></strong>
-                                        <br>
-                                        <small style="color: var(--gray);"><?= htmlspecialchars($row['StudentCode']) ?></small>
+                                        <div class="mod-cell-name"><?= htmlspecialchars($row['FullName']) ?></div>
+                                        <div class="mod-cell-sub"><?= htmlspecialchars($row['StudentCode']) ?></div>
                                     </td>
                                     <td>
-                                        <?= htmlspecialchars($row['BuildingName']) ?>
-                                        <br>
-                                        <small style="color: var(--gray);">Phòng <?= htmlspecialchars($row['RoomNumber']) ?></small>
+                                        <div class="mod-cell-name"><?= htmlspecialchars($row['BuildingName']) ?></div>
+                                        <div class="mod-cell-sub">Phòng <?= htmlspecialchars($row['RoomNumber']) ?></div>
                                     </td>
-                                    <td><strong><?= money_vn($row['TotalAmount']) ?></strong></td>
+                                    <td><span class="mod-fw-700"><?= money_vn($row['TotalAmount']) ?></span></td>
                                     <td>
-                                        <span class="status <?= $statusClass ?>">
-                                            <i class="fas fa-<?= $statusClass === 'paid' ? 'check' : ($statusClass === 'overdue' ? 'exclamation-triangle' : 'clock') ?>"></i>
+                                        <span class="mod-badge <?= $sBadge ?>">
+                                            <i class="fas <?= $sIcon ?>"></i>
                                             <?= htmlspecialchars($row['Status']) ?>
                                         </span>
                                     </td>
-                                    <td><?= date('d/m/Y', strtotime($row['CreatedAt'])) ?></td>
-                                    <td><?= !empty($row['DueDate']) ? date('d/m/Y', strtotime($row['DueDate'])) : '<span style="color: var(--gray);">-</span>' ?></td>
+                                    <td class="mod-cell-muted"><?= date('d/m/Y', strtotime($row['CreatedAt'])) ?></td>
+                                    <td class="mod-cell-muted"><?= !empty($row['DueDate']) ? date('d/m/Y', strtotime($row['DueDate'])) : '-' ?></td>
                                     <td>
                                         <?php if (!empty($row['PaidAt'])): ?>
-                                            <span style="color: var(--success);"><?= date('d/m/Y', strtotime($row['PaidAt'])) ?></span>
+                                            <span class="mod-badge mod-badge-emerald"><?= date('d/m/Y', strtotime($row['PaidAt'])) ?></span>
                                         <?php else: ?>
-                                            <span style="color: var(--gray);">-</span>
+                                            <span class="mod-cell-muted">-</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <strong><?= $row['Month'] ?>/<?= $row['Year'] ?></strong>
-                                    </td>
+                                    <td><span class="mod-fw-600"><?= $row['Month'] ?>/<?= $row['Year'] ?></span></td>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="9" style="text-align: center; color: var(--gray); padding: 40px;">
-                                    <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 16px; display: block;"></i>
-                                    Không tìm thấy hoá đơn nào phù hợp với bộ lọc hiện tại
+                                <td colspan="9">
+                                    <div class="mod-empty">
+                                        <i class="fas fa-search"></i>
+                                        <p>Không tìm thấy hoá đơn nào phù hợp</p>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endif; ?>
@@ -356,66 +387,41 @@ $listRes = $list->get_result();
     </div>
 
     <script>
-        // Toggle date inputs based on range selection
         function toggleDateInputs() {
             const range = document.getElementById('range').value;
-            document.getElementById('monthInput').style.display = range === 'month' ? 'block' : 'none';
-            document.getElementById('yearInput').style.display = range === 'year' ? 'block' : 'none';
-            document.getElementById('customInput').style.display = range === 'custom' ? 'block' : 'none';
+            document.getElementById('monthInput').style.display = range === 'month' ? 'flex' : 'none';
+            document.getElementById('yearInput').style.display = range === 'year' ? 'flex' : 'none';
+            document.getElementById('customInput').style.display = range === 'custom' ? 'flex' : 'none';
         }
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleDateInputs();
-
-            // Add loading states to export buttons
-            document.querySelectorAll('.export-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const button = this.querySelector('button');
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<div class="loading"></div> Đang xuất file...';
-                    button.disabled = true;
-
-                    setTimeout(() => {
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }, 3000);
-                });
-            });
         });
 
-        // Chart data
-        const labels = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
-        const paid = [<?php for ($m = 1; $m <= 12; $m++) {
-                            echo ($series[$m]['paid'] ?? 0) . ',';
-                        } ?>];
-        const unpaid = [<?php for ($m = 1; $m <= 12; $m++) {
-                            echo ($series[$m]['unpaid'] ?? 0) . ',';
-                        } ?>];
+        const labels = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+        const paid = [<?php for ($m = 1; $m <= 12; $m++) { echo ($series[$m]['paid'] ?? 0) . ','; } ?>];
+        const unpaid = [<?php for ($m = 1; $m <= 12; $m++) { echo ($series[$m]['unpaid'] ?? 0) . ','; } ?>];
 
-        // Initialize chart
         const ctx = document.getElementById('monthlyChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
                 datasets: [{
-                        label: 'Đã thu',
-                        data: paid,
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 1,
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Chưa thu',
-                        data: unpaid,
-                        backgroundColor: 'rgba(234, 179, 8, 0.8)',
-                        borderColor: 'rgba(234, 179, 8, 1)',
-                        borderWidth: 1,
-                        borderRadius: 4
-                    }
-                ]
+                    label: 'Đã thu',
+                    data: paid,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                },{
+                    label: 'Chưa thu',
+                    data: unpaid,
+                    backgroundColor: 'rgba(234, 179, 8, 0.8)',
+                    borderColor: 'rgba(234, 179, 8, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
             },
             options: {
                 responsive: true,
@@ -423,10 +429,7 @@ $listRes = $list->get_result();
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
+                        labels: { padding: 20, usePointStyle: true }
                     },
                     tooltip: {
                         callbacks: {
@@ -437,11 +440,7 @@ $listRes = $list->get_result();
                     }
                 },
                 scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
+                    x: { grid: { display: false } },
                     y: {
                         beginAtZero: true,
                         ticks: {
@@ -449,18 +448,12 @@ $listRes = $list->get_result();
                                 return new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
                             }
                         },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' }
                     }
                 },
-                animation: {
-                    duration: 1000,
-                    easing: 'easeOutQuart'
-                }
+                animation: { duration: 1000, easing: 'easeOutQuart' }
             }
         });
     </script>
 </body>
-
 </html>

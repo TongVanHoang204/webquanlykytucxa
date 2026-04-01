@@ -5,6 +5,11 @@ include '../../../includes/admin_header.php';
 include '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 $id = $_GET['id'] ?? 0;
 if (!$id) {
     echo "<script>alert('Thiếu ID hợp đồng!'); window.location='contract_list.php';</script>";
@@ -57,11 +62,12 @@ function getStatusClass($status)
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiết Hợp đồng #<?= $contract['ContractID'] ?> | Hệ thống Ký túc xá</title>
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/contract/staff_contract_detail.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -185,6 +191,8 @@ function getStatusClass($status)
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         // 🔁 Gia hạn hợp đồng
         function renewContract(id) {
             Swal.fire({
@@ -210,12 +218,15 @@ function getStatusClass($status)
                     fetch('contract_update_status.php', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: new URLSearchParams({
                                 id,
                                 action: 'renew',
-                                newEndDate: result.value
+                                newEndDate: result.value,
+                                _csrf: CSRF_TOKEN
                             })
                         })
                         .then(r => r.json())
@@ -264,11 +275,14 @@ function getStatusClass($status)
                     fetch('contract_update_status.php', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: new URLSearchParams({
                                 id,
-                                action: 'cancel'
+                                action: 'cancel',
+                                _csrf: CSRF_TOKEN
                             })
                         })
                         .then(r => r.json())
@@ -317,10 +331,13 @@ function getStatusClass($status)
                     fetch('contract_delete_api.php', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: new URLSearchParams({
-                                id
+                                id,
+                                _csrf: CSRF_TOKEN
                             })
                         })
                         .then(r => r.json())

@@ -1,321 +1,107 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../db_connect.php';
-require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/auth_check.php';
+require_once __DIR__ . '/../../includes/notification_service.php';
+requireRole(['Student']);
 
-if (empty($_SESSION['UserID'])) {
-    header('Location: /login.php');
-    exit;
-}
+$userId = (int) ($_SESSION['UserID'] ?? 0);
+$notifications = fetchUserNotifications($conn, $userId, 50);
+$unreadCount = countUnreadUserNotifications($conn, $userId);
 
-$userId = (int)$_SESSION['UserID'];
-$studentId = 0;
-
-// Lấy StudentID
-$stmt = $conn->prepare("SELECT StudentID FROM Students WHERE UserID = ? LIMIT 1");
-$stmt->bind_param('i', $userId);
-$stmt->execute();
-$r = $stmt->get_result();
-if ($row = $r->fetch_assoc()) {
-    $studentId = (int)$row['StudentID'];
-}
-$stmt->close();
-
-// Lấy tất cả thông báo (invoice + announcement)
-$notifications = [];
-
-if ($studentId > 0) {
-    // Thông báo hóa đơn
-    $sqlInvoice = "
-        SELECT 
-            'invoice' AS Type,
-            i.InvoiceID AS ID,
-            CONCAT('Hóa đơn tháng ', i.Month, '/', i.Year) AS Title,
-            CONCAT(
-                'Bạn có hóa đơn ',
-                FORMAT(i.TotalAmount, 0), ' đ chưa thanh toán. ',
-                'Hạn thanh toán: ', DATE_FORMAT(i.DueDate, '%d/%m/%Y')
-            ) AS Message,
-            i.DueDate AS CreatedAt,
-            CONCAT('/modules/user/bills/bill_detail.php?id=', i.InvoiceID) AS Link,
-            IF(inr.ReadID IS NULL, 0, 1) AS IsRead
-        FROM Invoices i
-        INNER JOIN Contracts c ON i.ContractID = c.ContractID
-        LEFT JOIN InvoiceNotificationReads inr ON i.InvoiceID = inr.InvoiceID AND inr.StudentID = ?
-        WHERE c.StudentID = ?
-          AND i.Status = 'Chưa thanh toán'
-          AND i.DueDate >= CURDATE()
-    ";
-    
-    $stmt = $conn->prepare($sqlInvoice);
-    $stmt->bind_param('ii', $studentId, $studentId);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    
-    while ($row = $res->fetch_assoc()) {
-        $notifications[] = $row;
-    }
-    $stmt->close();
-}
-
-// Thông báo công khai - Loại bỏ trùng lặp
-$sqlAnnouncement = "
-    SELECT DISTINCT
-        'announcement' AS Type,
-        a.AnnouncementID AS ID,
-        a.Title,
-        SUBSTRING(a.Content, 1, 200) AS Message,
-        a.DatePosted AS CreatedAt,
-        CONCAT('/modules/user/accesslogs.php?view=', a.AnnouncementID) AS Link,
-        IF(av.ViewID IS NULL, 0, 1) AS IsRead
-    FROM announcements a
-    LEFT JOIN AnnouncementViews av ON a.AnnouncementID = av.AnnouncementID AND av.StudentID = ?
-    ORDER BY a.DatePosted DESC
-    LIMIT 20
-";
-
-$stmt = $conn->prepare($sqlAnnouncement);
-$stmt->bind_param('i', $studentId);
-$stmt->execute();
-$res = $stmt->get_result();
-
-while ($row = $res->fetch_assoc()) {
-    $notifications[] = $row;
-}
-$stmt->close();
-
-// Sắp xếp: Chưa đọc trước, sau đó mới nhất
-usort($notifications, function($a, $b) {
-    if ($a['IsRead'] != $b['IsRead']) {
-        return $a['IsRead'] - $b['IsRead'];
-    }
-    return strtotime($b['CreatedAt']) - strtotime($a['CreatedAt']);
-});
+$pageTitle = 'Thông báo';
+$pageStylesheets = ['assets/css/modules_shared.css'];
+require_once __DIR__ . '/../../includes/header.php';
 ?>
+<style>
+        .notif-page { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+        .notif-head { text-align: center; margin-bottom: 32px; }
+        .notif-head h1 { font-size: 1.7rem; font-weight: 800; color: var(--text); margin: 0 0 8px; }
+        .notif-head p { color: var(--text-secondary); font-size: 0.92rem; margin: 0; }
+        .notif-head .unread-count { display: inline-block; background: var(--gradient-primary); color: #fff; padding: 4px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; margin-top: 10px; }
 
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Tất cả thông báo - Ký túc xá</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        .notifications-page {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .page-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .page-header h1 {
-            font-size: 2rem;
-            color: var(--text);
-            margin-bottom: 10px;
-        }
-
-        .page-header p {
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
-
-        .notification-card {
-            background: var(--bg-card);
-            border: 1px solid var(--stroke);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .notification-card.unread {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(96, 165, 250, 0.05) 100%);
-            border-color: rgba(59, 130, 246, 0.3);
-        }
-
-        .notification-card.unread::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: linear-gradient(180deg, var(--brand), var(--brand-2));
-            border-radius: 12px 0 0 12px;
-        }
-
-        .notification-card:hover {
-            border-color: var(--brand);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            transform: translateY(-2px);
-        }
-
-        .notification-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .notification-type {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 999px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .notification-type.invoice {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-        }
-
-        .notification-type.announcement {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--brand);
-        }
-
-        .notification-badge {
-            padding: 4px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            background: var(--brand);
-            color: white;
-            border-radius: 999px;
-        }
-
-        .notification-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 8px;
-        }
-
-        .notification-message {
-            font-size: 0.95rem;
-            color: var(--muted);
-            line-height: 1.6;
-            margin-bottom: 12px;
-        }
-
-        .notification-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 12px;
-            border-top: 1px solid var(--stroke);
-        }
-
-        .notification-time {
-            font-size: 0.85rem;
-            color: var(--muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .notification-action {
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, var(--brand), var(--brand-2));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .notification-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: var(--muted);
-            margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.3rem;
-            color: var(--text);
-            margin-bottom: 10px;
-        }
-
-        .empty-state p {
-            color: var(--muted);
-        }
+        .notif-card { background: var(--surface); border: 1px solid var(--stroke); border-radius: 16px; padding: 20px 24px; margin-bottom: 14px; transition: all 0.3s ease; position: relative; }
+        .notif-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .notif-card.unread { border-left: 4px solid var(--primary); background: linear-gradient(135deg, rgba(67,97,238,0.04) 0%, rgba(67,97,238,0.01) 100%); }
+        .notif-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; }
+        .notif-type { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; font-size: 0.72rem; font-weight: 700; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .notif-type.system, .notif-type.info { background: rgba(67,97,238,0.1); color: #4361ee; }
+        .notif-type.billing, .notif-type.success { background: rgba(16,185,129,0.1); color: #10b981; }
+        .notif-type.access { background: rgba(59,130,246,0.1); color: #2563eb; }
+        .notif-type.email { background: rgba(168,85,247,0.12); color: #9333ea; }
+        .notif-type.warning { background: rgba(245,158,11,0.12); color: #d97706; }
+        .notif-type.danger { background: rgba(239,68,68,0.12); color: #dc2626; }
+        .notif-unread-badge { padding: 3px 10px; font-size: 0.7rem; font-weight: 700; background: var(--gradient-primary); color: #fff; border-radius: 999px; }
+        .notif-title { font-size: 1.05rem; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+        .notif-msg { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin: 0 0 14px; }
+        .notif-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--stroke); gap: 12px; }
+        .notif-time { font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+        .notif-action { padding: 8px 18px; font-size: 0.85rem; font-weight: 700; background: var(--gradient-primary); color: #fff; border: none; border-radius: 10px; text-decoration: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .notif-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(67,97,238,0.3); }
     </style>
-</head>
-<body>
-    <div class="notifications-page">
-        <div class="page-header">
+<section class="notif-page">
+        <div class="notif-head">
             <h1><i class="fas fa-bell"></i> Tất cả thông báo</h1>
-            <p>Danh sách đầy đủ các thông báo hóa đơn và thông báo chung</p>
+            <p>Danh sách các thông báo cá nhân theo tài khoản hiện tại</p>
+            <?php if ($unreadCount > 0): ?>
+                <span class="unread-count"><i class="fas fa-envelope"></i> <?= $unreadCount ?> chưa đọc</span>
+            <?php endif; ?>
         </div>
 
         <?php if (!empty($notifications)): ?>
             <?php foreach ($notifications as $notif): ?>
-                <?php 
-                    $isUnread = $notif['IsRead'] == 0;
-                    $type = $notif['Type'];
-                    $typeLabel = $type === 'invoice' ? 'Hóa đơn' : 'Thông báo';
-                    $typeIcon = $type === 'invoice' ? 'fa-file-invoice-dollar' : 'fa-bullhorn';
+                <?php
+                $isUnread = (int) ($notif['IsRead'] ?? 0) === 0;
+                $type = (string) ($notif['Type'] ?? 'system');
+                $severity = (string) ($notif['Severity'] ?? 'info');
+                $typeLabel = match ($type) {
+                    'billing' => 'Hóa đơn',
+                    'access' => 'Ra/vào cổng',
+                    'email' => 'Email',
+                    default => 'Thông báo',
+                };
+                $typeIcon = match ($type) {
+                    'billing' => 'fa-file-invoice-dollar',
+                    'access' => 'fa-door-open',
+                    'email' => 'fa-envelope-open-text',
+                    default => 'fa-bullhorn',
+                };
+                $typeClass = in_array($severity, ['success', 'warning', 'danger'], true) ? $severity : $type;
                 ?>
-                <div class="notification-card <?= $isUnread ? 'unread' : '' ?>">
-                    <div class="notification-header">
-                        <span class="notification-type <?= $type ?>">
-                            <i class="fas <?= $typeIcon ?>"></i>
-                            <?= $typeLabel ?>
+                <div class="notif-card <?= $isUnread ? 'unread' : '' ?>">
+                    <div class="notif-top">
+                        <span class="notif-type <?= htmlspecialchars($typeClass) ?>">
+                            <i class="fas <?= htmlspecialchars($typeIcon) ?>"></i>
+                            <?= htmlspecialchars($typeLabel) ?>
                         </span>
                         <?php if ($isUnread): ?>
-                            <span class="notification-badge">Chưa đọc</span>
+                            <span class="notif-unread-badge">Chưa đọc</span>
                         <?php endif; ?>
                     </div>
-
-                    <h3 class="notification-title"><?= htmlspecialchars($notif['Title']) ?></h3>
-                    <p class="notification-message"><?= htmlspecialchars($notif['Message']) ?></p>
-
-                    <div class="notification-footer">
-                        <span class="notification-time">
+                    <h3 class="notif-title"><?= htmlspecialchars($notif['Title'] ?? '') ?></h3>
+                    <p class="notif-msg"><?= htmlspecialchars($notif['Message'] ?? '') ?></p>
+                    <div class="notif-foot">
+                        <span class="notif-time">
                             <i class="fas fa-clock"></i>
-                            <?= date('d/m/Y H:i', strtotime($notif['CreatedAt'])) ?>
+                            <?= !empty($notif['CreatedAt']) ? date('d/m/Y H:i', strtotime((string) $notif['CreatedAt'])) : '-' ?>
                         </span>
                         <?php if (!empty($notif['Link'])): ?>
-                            <a href="<?= htmlspecialchars($notif['Link']) ?>" class="notification-action">
-                                <i class="fas fa-arrow-right"></i> Xem chi tiết
+                            <a href="<?= htmlspecialchars((string) $notif['Link']) ?>" class="notif-action">
+                                <i class="fas fa-arrow-right"></i> Xem
                             </a>
                         <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="empty-state">
+            <div class="mod-empty" style="padding:60px;">
                 <i class="fas fa-inbox"></i>
-                <h3>Không có thông báo</h3>
-                <p>Bạn chưa có thông báo nào trong hệ thống</p>
+                <p>Bạn chưa có thông báo nào.</p>
             </div>
         <?php endif; ?>
-    </div>
+    </section>
 
-    <?php include __DIR__ . '/../../includes/footer.php'; ?>
-</body>
-</html>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

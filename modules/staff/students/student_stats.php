@@ -25,15 +25,10 @@ if ($q) {
     }
 }
 
-/* 3️⃣ Theo khoa (dùng FacultyID + Faculties)
-   - Nếu FacultyID null/không khớp: gom vào 'Chưa gán khoa'
-*/
-/* 3️⃣ Theo khoa (hiển thị cả khoa chưa có sinh viên) */
+/* 3️⃣ Theo khoa */
 $byFaculty = [];
 $q2 = $conn->query("
-    SELECT 
-        f.FacultyName,
-        COUNT(s.StudentID) AS c
+    SELECT f.FacultyName, COUNT(s.StudentID) AS c
     FROM Faculties f
     LEFT JOIN Students s ON s.FacultyID = f.FacultyID
     GROUP BY f.FacultyID, f.FacultyName
@@ -47,7 +42,6 @@ if ($q2) {
         ];
     }
 }
-
 
 /* 4️⃣ Theo năm học (CourseYear) */
 $byCourse = [];
@@ -67,7 +61,6 @@ if ($q3) {
 }
 
 /* 5️⃣ Tình trạng ở ký túc xá (dựa trên HĐ hiệu lực) */
-/* Đang ở: có ít nhất 1 HĐ Status = 'Hiệu lực' */
 $inDorm = 0;
 $resIn = $conn->query("
     SELECT COUNT(DISTINCT s.StudentID) AS c
@@ -79,281 +72,239 @@ if ($resIn && $row = $resIn->fetch_assoc()) {
     $inDorm = (int)$row['c'];
 }
 
-/* Không ở: không có HĐ hiệu lực */
 $outDorm = 0;
 $resOut = $conn->query("
     SELECT COUNT(*) AS c
     FROM Students s
-    LEFT JOIN Contracts c
-        ON c.StudentID = s.StudentID
-        AND c.Status = 'Hiệu lực'
+    LEFT JOIN Contracts c ON c.StudentID = s.StudentID AND c.Status = 'Hiệu lực'
     WHERE c.ContractID IS NULL
 ");
 if ($resOut && $row = $resOut->fetch_assoc()) {
     $outDorm = (int)$row['c'];
 }
+
+$inDormPct = $total > 0 ? round(($inDorm / $total) * 100, 1) : 0;
+$outDormPct = $total > 0 ? round(($outDorm / $total) * 100, 1) : 0;
+
+// Sort faculties by count desc for visualization
+usort($byFaculty, function($a, $b) { return $b['c'] - $a['c']; });
+$topFaculties = array_slice($byFaculty, 0, 8);
 ?>
-<!-- Page specific styles -->
-<link rel="stylesheet" href="../../../assets/css/staff/students/staff_student_stats.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!DOCTYPE html>
+<html lang="vi">
 
-<div class="dashboard-container">
-        <!-- Header -->
-        <div class="dashboard-header">
-            <div class="header-content">
-                <h1><i class="fas fa-chart-pie"></i> Thống kê Sinh viên</h1>
-                <p>Tổng quan về số lượng, phân bố và tình trạng sinh viên</p>
-                <a href="../../../modules/admin/dashboard.php" class="btn-back">
-                    <i class="fas fa-arrow-left"></i> Quay lại Dashboard
-                </a>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê sinh viên | Hệ thống Ký túc xá</title>
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/modules_shared.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <style>
+        .chart-container { position: relative; height: 320px; width: 100%; }
+        /* Progress line for table */
+        .prog-line-wrapper { display: flex; align-items: center; gap: 10px; }
+        .prog-line-bg { flex: 1; height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
+        .prog-line-fill { height: 100%; border-radius: 4px; background: var(--primary); }
+    </style>
+</head>
+
+<body>
+<div class="mod-container">
+    <!-- Header -->
+    <div class="mod-header">
+        <div class="mod-header-left">
+            <h2><i class="fas fa-chart-pie"></i> Thống kê Sinh viên</h2>
+        </div>
+        <div class="mod-header-right">
+            <a href="student_list.php" class="mod-btn mod-btn-outline mod-btn-sm">
+                <i class="fas fa-list"></i> Danh sách sinh viên
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="mod-stats mod-stagger">
+        <div class="mod-stat accent-blue">
+            <div class="mod-stat-icon" style="background:var(--gradient-primary);">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="mod-stat-info">
+                <span class="mod-stat-number"><?= number_format($total) ?></span>
+                <span class="mod-stat-label">Tổng sinh viên</span>
             </div>
         </div>
-
-        <!-- Stats Overview -->
-        <div class="stats-overview">
-            <!-- Card 1: Tổng sinh viên -->
-            <div class="stat-card">
-                <div class="stat-icon total">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <h3><?= number_format($total) ?></h3>
-                    <p>Tổng số sinh viên</p>
-                    <div class="stat-breakdown">
-                        <span class="badge male"><i class="fas fa-mars"></i> <?= $gender['Nam'] ?></span>
-                        <span class="badge female"><i class="fas fa-venus"></i> <?= $gender['Nữ'] ?></span>
-                    </div>
-                </div>
+        <div class="mod-stat accent-green">
+            <div class="mod-stat-icon" style="background:var(--gradient-success);">
+                <i class="fas fa-bed"></i>
             </div>
-
-            <!-- Card 2: Đang ở KTX -->
-            <?php 
-                $inDormPct = $total > 0 ? round(($inDorm / $total) * 100, 1) : 0;
-            ?>
-            <div class="stat-card">
-                <div class="stat-icon dorm">
-                    <i class="fas fa-bed"></i>
-                </div>
-                <div class="stat-content">
-                    <h3><?= number_format($inDorm) ?></h3>
-                    <p>Đang ở KTX</p>
-                    <div class="stat-breakdown">
-                        <span class="badge success"><i class="fas fa-check-circle"></i> <?= $inDormPct ?>% tổng số</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 3: Không ở KTX -->
-             <?php 
-                $outDormPct = $total > 0 ? round(($outDorm / $total) * 100, 1) : 0;
-            ?>
-            <div class="stat-card">
-                <div class="stat-icon nodorm">
-                    <i class="fas fa-door-open"></i>
-                </div>
-                <div class="stat-content">
-                    <h3><?= number_format($outDorm) ?></h3>
-                    <p>Không ở KTX</p>
-                    <div class="stat-breakdown">
-                        <span class="badge warning"><i class="fas fa-exclamation-circle"></i> <?= $outDormPct ?>% tổng số</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 4: Thông tin đào tạo -->
-            <div class="stat-card">
-                <div class="stat-icon faculty">
-                    <i class="fas fa-university"></i>
-                </div>
-                <div class="stat-content">
-                    <h3><?= count($byFaculty) ?></h3>
-                    <p>Khoa đào tạo</p>
-                     <div class="stat-breakdown">
-                        <span class="badge info"><i class="fas fa-layer-group"></i> <?= count($byCourse) ?> Khóa học</span>
-                    </div>
-                </div>
+            <div class="mod-stat-info">
+                <span class="mod-stat-number"><?= number_format($inDorm) ?></span>
+                <span class="mod-stat-label">Đang ở KTX (<?= $inDormPct ?>%)</span>
             </div>
         </div>
-
-        <!-- Charts Grid -->
-        <div class="charts-grid">
-            <div class="chart-box">
-                <h3><i class="fas fa-venus-mars"></i> Phân bố giới tính</h3>
-                <canvas id="chartGender"></canvas>
+        <div class="mod-stat accent-orange">
+            <div class="mod-stat-icon" style="background:var(--gradient-warning);">
+                <i class="fas fa-door-open"></i>
             </div>
-
-            <div class="chart-box">
-                <h3><i class="fas fa-bed"></i> Tình trạng ở KTX</h3>
-                <canvas id="chartDorm"></canvas>
-            </div>
-
-            <div class="chart-box">
-                <h3><i class="fas fa-calendar-alt"></i> Sinh viên theo khóa học</h3>
-                <canvas id="chartCourse"></canvas>
-            </div>
-
-            <div class="chart-box">
-                 <h3><i class="fas fa-university"></i> Top Khoa đông sinh viên nhất</h3>
-                 <canvas id="chartFaculty"></canvas>
+            <div class="mod-stat-info">
+                <span class="mod-stat-number"><?= number_format($outDorm) ?></span>
+                <span class="mod-stat-label">Không ở KTX (<?= $outDormPct ?>%)</span>
             </div>
         </div>
-
-        <!-- Detailed Table -->
-        <div class="unified-box">
-            <div class="box-header">
-                <h3><i class="fas fa-list-ol"></i> Chi tiết theo Khoa</h3>
+        <div class="mod-stat accent-purple">
+            <div class="mod-stat-icon" style="background:var(--gradient-info);">
+                <i class="fas fa-university"></i>
             </div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tên Khoa</th>
-                            <th class="text-center">Số lượng</th>
-                            <th style="width: 40%">Tỷ lệ phần trăm</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Sort by count desc for better visualization
-                        usort($byFaculty, function($a, $b) {
-                            return $b['c'] - $a['c'];
-                        });
-                        
-                        $max = $total > 0 ? $total : 1;
-                        foreach ($byFaculty as $f):
-                            $percent = round(($f['c'] / $max) * 100, 1);
-                        ?>
-                            <tr>
-                                <td class="faculty-name">
-                                    <?= htmlspecialchars($f['FacultyName']) ?>
-                                </td>
-                                <td class="count-col">
-                                    <?= number_format($f['c']) ?>
-                                </td>
-                                <td>
-                                    <div class="progress-wrapper">
-                                        <div class="progress-bg">
-                                            <div class="progress-bar" style="width: <?= $percent ?>%"></div>
-                                        </div>
-                                        <span class="pct"><?= $percent ?>%</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="mod-stat-info">
+                <span class="mod-stat-number"><?= count($byFaculty) ?></span>
+                <span class="mod-stat-label">Khoa đào tạo</span>
             </div>
         </div>
     </div>
 
-    <script>
-        // Common Options
-        const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                    }
-                }
-            }
-        };
+    <!-- Charts Grid (2x2 style handled by mod-grid-2 nested) -->
+    <div class="mod-grid-2" style="align-items:start;">
+        <div class="mod-card">
+            <div class="mod-card-header">
+                <div class="mod-card-title"><i class="fas fa-venus-mars"></i> Phân bố giới tính</div>
+            </div>
+            <div class="mod-card-body">
+                <div class="chart-container">
+                    <canvas id="chartGender"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mod-card">
+            <div class="mod-card-header">
+                <div class="mod-card-title"><i class="fas fa-bed"></i> Tình trạng ở KTX</div>
+            </div>
+            <div class="mod-card-body">
+                <div class="chart-container">
+                    <canvas id="chartDorm"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mod-card">
+            <div class="mod-card-header">
+                <div class="mod-card-title"><i class="fas fa-layer-group"></i> Theo khóa học</div>
+            </div>
+            <div class="mod-card-body">
+                <div class="chart-container">
+                    <canvas id="chartCourse"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mod-card">
+            <div class="mod-card-header">
+                <div class="mod-card-title"><i class="fas fa-university"></i> Top Khoa đông SV nhất</div>
+            </div>
+            <div class="mod-card-body">
+                <div class="chart-container">
+                    <canvas id="chartFaculty"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // 1. Giới tính (Doughnut)
-        new Chart(document.getElementById('chartGender'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Nam', 'Nữ', 'Khác'],
-                datasets: [{
-                    data: [<?= $gender['Nam'] ?>, <?= $gender['Nữ'] ?>, <?= $gender['Khác'] ?>],
-                    backgroundColor: ['#3b82f6', '#ec4899', '#9ca3af'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                ...commonOptions,
-                cutout: '65%'
-            }
-        });
+    <!-- Bảng chi tiết -->
+    <div class="mod-card">
+        <div class="mod-card-header">
+            <div class="mod-card-title"><i class="fas fa-list-ol"></i> Chi tiết theo Khoa</div>
+        </div>
+        <div class="mod-table-scroll" style="max-height: 500px;">
+            <table class="mod-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%;">Tên Khoa</th>
+                        <th style="width:20%;">Số lượng</th>
+                        <th style="width:40%;">Tỷ lệ (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $maxVal = $total > 0 ? $total : 1;
+                    foreach ($byFaculty as $f):
+                        $percent = round(($f['c'] / $maxVal) * 100, 1);
+                    ?>
+                        <tr>
+                            <td><span class="mod-fw-600"><?= htmlspecialchars($f['FacultyName']) ?></span></td>
+                            <td><span class="mod-badge mod-badge-blue"><?= number_format($f['c']) ?></span></td>
+                            <td>
+                                <div class="prog-line-wrapper">
+                                    <div class="prog-line-bg"><div class="prog-line-fill" style="width: <?= $percent ?>%"></div></div>
+                                    <span class="mod-cell-muted" style="min-width:40px;text-align:right;"><?= $percent ?>%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (count($byFaculty)===0): ?>
+                        <tr><td colspan="3"><div class="mod-empty">Chưa có dữ liệu</div></td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        // 2. Tình trạng ở KTX (Pie)
-        new Chart(document.getElementById('chartDorm'), {
-            type: 'pie',
-            data: {
-                labels: ['Đang ở KTX', 'Không ở KTX'],
-                datasets: [{
-                    data: [<?= $inDorm ?>, <?= $outDorm ?>],
-                    backgroundColor: ['#10b981', '#f59e0b'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: commonOptions
-        });
+<script>
+    const opts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } } } };
 
-        // 3. Khóa học (Bar - Vertical)
-        new Chart(document.getElementById('chartCourse'), {
-            type: 'bar',
-            data: {
-                labels: <?= json_encode(array_column($byCourse, 'CourseYear')) ?>,
-                datasets: [{
-                    label: 'Số sinh viên',
-                    data: <?= json_encode(array_column($byCourse, 'c')) ?>,
-                    backgroundColor: '#8b5cf6',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...commonOptions,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { borderDash: [2, 4], color: '#e5e7eb' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
+    new Chart(document.getElementById('chartGender'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Nam', 'Nữ', 'Khác'],
+            datasets: [{
+                data: [<?= $gender['Nam'] ?>, <?= $gender['Nữ'] ?>, <?= $gender['Khác'] ?>],
+                backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(236, 72, 153, 0.8)', 'rgba(156, 163, 175, 0.8)'],
+                borderColor: ['#3b82f6', '#ec4899', '#9ca3af'], borderWidth: 2, hoverOffset: 10
+            }]
+        }, options: { ...opts, cutout: '65%' }
+    });
 
-        // 4. Khoa (Bar - Horizontal for readablity)
-        // Taking top 5 faculties for chart
-        <?php 
-            $topFaculties = array_slice($byFaculty, 0, 8); 
-        ?>
-        new Chart(document.getElementById('chartFaculty'), {
-            type: 'bar',
-            data: {
-                labels: <?= json_encode(array_column($topFaculties, 'FacultyName')) ?>,
-                datasets: [{
-                    label: 'Số sinh viên',
-                    data: <?= json_encode(array_column($topFaculties, 'c')) ?>,
-                    backgroundColor: '#06d6a0',
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                ...commonOptions,
-                indexAxis: 'y', // Horizontal bar
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                         grid: { borderDash: [2, 4], color: '#e5e7eb' }
-                    },
-                    y: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-    </script>
-    
-    </main>
-    <?php include '../../../includes/footer.php'; ?>
+    new Chart(document.getElementById('chartDorm'), {
+        type: 'pie',
+        data: {
+            labels: ['Đang ở KTX', 'Không ở KTX'],
+            datasets: [{
+                data: [<?= $inDorm ?>, <?= $outDorm ?>],
+                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+                borderColor: ['#10b981', '#f59e0b'], borderWidth: 2, hoverOffset: 10
+            }]
+        }, options: opts
+    });
+
+    new Chart(document.getElementById('chartCourse'), {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode(array_column($byCourse, 'CourseYear')) ?>,
+            datasets: [{
+                label: 'Số sinh viên',
+                data: <?= json_encode(array_column($byCourse, 'c')) ?>,
+                backgroundColor: 'rgba(139, 92, 246, 0.8)', borderColor: '#8b5cf6', borderWidth: 1, borderRadius: 4
+            }]
+        }, options: {
+            ...opts, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } }, x: { grid: { display: false } } }
+        }
+    });
+
+    new Chart(document.getElementById('chartFaculty'), {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode(array_column($topFaculties, 'FacultyName')) ?>,
+            datasets: [{
+                label: 'Số sinh viên',
+                data: <?= json_encode(array_column($topFaculties, 'c')) ?>,
+                backgroundColor: 'rgba(6, 214, 160, 0.8)', borderColor: '#06d6a0', borderWidth: 1, borderRadius: 4
+            }]
+        }, options: {
+            ...opts, indexAxis: 'y', scales: { x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } }, y: { grid: { display: false } } }
+        }
+    });
+</script>
 </body>
 </html>

@@ -1,9 +1,11 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../db_connect.php';
 require_once __DIR__ . '/log_helper.php';
-require_once __DIR__ . "/error_handler.php";
+require_once __DIR__ . '/error_handler.php';
 
 $userName = $_SESSION['FullName'] ?? 'Quản trị viên';
 $userAvatar = $_SESSION['Avatar'] ?? null;
@@ -12,73 +14,63 @@ $pageTitle = $pageTitle ?? 'Trang quản trị - Ký túc xá';
 $pageBodyClass = trim('app-shell app-shell--admin ' . ($pageBodyClass ?? 'theme-auto'));
 $pageStylesheets = $pageStylesheets ?? [];
 
-/* Configure Base Path */
 $base = '/';
-if (strpos($_SERVER['REQUEST_URI'], '/WEBQuanLyKyTucXa') === 0) {
+if (strpos($_SERVER['REQUEST_URI'] ?? '', '/WEBQuanLyKyTucXa') === 0) {
     $base = '/WEBQuanLyKyTucXa/';
-} 
+}
 
-// Fetch Avatar if missing
 if (!$userAvatar && isset($_SESSION['UserID']) && isset($conn) && $conn instanceof mysqli) {
     try {
-        $userId = (int)$_SESSION['UserID'];
-        $stmt = $conn->prepare("SELECT Avatar FROM Students WHERE UserID = ? LIMIT 1");
+        $userId = (int) $_SESSION['UserID'];
+        $stmt = $conn->prepare('SELECT Avatar FROM Students WHERE UserID = ? LIMIT 1');
         if ($stmt) {
-            $stmt->bind_param("i", $userId);
+            $stmt->bind_param('i', $userId);
             $stmt->execute();
-            $res = $stmt->get_result();
-            if ($row = $res->fetch_assoc()) {
-                $userAvatar = $row['Avatar'];
-                $_SESSION['Avatar'] = $userAvatar;
+            $result = $stmt->get_result();
+            if ($result instanceof mysqli_result && ($row = $result->fetch_assoc())) {
+                $userAvatar = $row['Avatar'] ?? null;
+                if ($userAvatar) {
+                    $_SESSION['Avatar'] = $userAvatar;
+                }
             }
             $stmt->close();
         }
-    } catch (Exception $e) {
-        // Silent fail for header
+    } catch (Throwable $e) {
+        // Header should never fatal because avatar lookup fails.
     }
 }
 
-// Final Avatar Path
 $avatarPath = $base . 'assets/img/avatars/user.png';
-if ($userAvatar && !empty($userAvatar)) {
-    if (preg_match('/^https?:\/\//', $userAvatar)) {
-        $avatarPath = $userAvatar;
-    } else {
-        $avatarPath = $base . ltrim($userAvatar, '/');
-    }
+if (!empty($userAvatar)) {
+    $avatarPath = preg_match('/^https?:\/\//', $userAvatar)
+        ? $userAvatar
+        : $base . ltrim((string) $userAvatar, '/');
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($pageTitle) ?></title>
 
-    <!-- Fonts & Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css" />
-    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css" />
-    <!-- Admin Chat AI CSS -->
-    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/chat_ai_widget.css" />
-    <link rel="stylesheet" href="<?= $base ?>assets/css/app_shell.css" />
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fonts/fonts.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/chat_ai_widget.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/app_shell.css">
     <?php foreach ($pageStylesheets as $stylesheet): ?>
-        <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>" />
+        <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>">
     <?php endforeach; ?>
 
-    <!-- Scripts -->
     <script src="<?= $base ?>assets/js/admin_header.js" defer></script>
     <?php if ($userRole === 'Admin'): ?>
         <script src="<?= $base ?>assets/js/admin_chat_ai_widget.js" defer></script>
     <?php endif; ?>
 </head>
 
-<body class="<?= htmlspecialchars($pageBodyClass) ?>" data-base="<?= $base ?>">
-
-    <!-- Mobile Drawer (Sidebar) -->
+<body class="<?= htmlspecialchars($pageBodyClass) ?>" data-base="<?= htmlspecialchars($base, ENT_QUOTES) ?>">
     <aside class="drawer">
         <div class="logo" style="margin-bottom: 20px;">
             <i class="fas fa-building"></i> <span>Ký túc xá</span>
@@ -89,9 +81,24 @@ if ($userAvatar && !empty($userAvatar)) {
                     <i class="fas fa-gauge-high"></i> Dashboard Admin
                 </a>
             <?php endif; ?>
-            
+
             <a href="<?= $base ?>modules/staff/dashboard.php">
                 <i class="fas fa-chart-line"></i> Dashboard Manager
+            </a>
+            <a href="<?= $base ?>modules/staff/communications/notification_center.php">
+                <i class="fas fa-bell"></i> Thông báo
+            </a>
+            <a href="<?= $base ?>modules/staff/communications/mass_email.php">
+                <i class="fas fa-envelope-open-text"></i> Mass Email
+            </a>
+            <a href="<?= $base ?>modules/staff/report/report_hub.php">
+                <i class="fas fa-file-export"></i> Export báo cáo
+            </a>
+            <a href="<?= $base ?>modules/staff/access/gate_scanner.php">
+                <i class="fas fa-qrcode"></i> Quét cổng
+            </a>
+            <a href="<?= $base ?>modules/staff/access/gate_logs.php">
+                <i class="fas fa-door-open"></i> Nhật ký cổng
             </a>
 
             <?php if ($userRole !== 'Manager'): ?>
@@ -103,11 +110,9 @@ if ($userAvatar && !empty($userAvatar)) {
             <a href="<?= $base ?>modules/staff/rooms/rooms.php">
                 <i class="fas fa-bed"></i> Quản lý phòng
             </a>
-            
             <a href="<?= $base ?>modules/staff/students/student_list.php">
                 <i class="fas fa-user-graduate"></i> Sinh viên
             </a>
-
             <a href="<?= $base ?>index.php">
                 <i class="fas fa-house-user"></i> Trang chủ User
             </a>
@@ -115,21 +120,17 @@ if ($userAvatar && !empty($userAvatar)) {
     </aside>
     <div class="drawer-overlay"></div>
 
-    <!-- Main Header -->
     <header class="admin-header">
         <div class="left">
-            <!-- Mobile Toggle -->
             <button class="hamburger" aria-label="Mở menu">
                 <span></span><span></span><span></span>
             </button>
 
-            <!-- Logo -->
             <a href="<?= $base ?>modules/staff/dashboard.php" class="logo">
                 <i class="fas fa-building"></i>
                 <span>Ký túc xá</span>
             </a>
 
-            <!-- Desktop Nav -->
             <nav class="admin-nav">
                 <?php if ($userRole !== 'Manager'): ?>
                     <a href="<?= $base ?>modules/admin/dashboard.php" data-path="modules/admin/dashboard.php">
@@ -137,10 +138,30 @@ if ($userAvatar && !empty($userAvatar)) {
                         <span>Admin</span>
                     </a>
                 <?php endif; ?>
-                
+
                 <a href="<?= $base ?>modules/staff/dashboard.php" data-path="modules/staff/dashboard.php">
                     <i class="fas fa-chart-line"></i>
                     <span>Manager</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/communications/notification_center.php" data-path="modules/staff/communications/notification_center.php">
+                    <i class="fas fa-bell"></i>
+                    <span>Thông báo</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/communications/mass_email.php" data-path="modules/staff/communications/mass_email.php">
+                    <i class="fas fa-envelope-open-text"></i>
+                    <span>Email</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/report/report_hub.php" data-path="modules/staff/report/report_hub.php">
+                    <i class="fas fa-file-export"></i>
+                    <span>Report</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/access/gate_scanner.php" data-path="modules/staff/access/gate_scanner.php">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Quét cổng</span>
+                </a>
+                <a href="<?= $base ?>modules/staff/access/gate_logs.php" data-path="modules/staff/access/gate_logs.php">
+                    <i class="fas fa-door-open"></i>
+                    <span>Log cổng</span>
                 </a>
 
                 <?php if ($userRole !== 'Manager'): ?>
@@ -154,36 +175,31 @@ if ($userAvatar && !empty($userAvatar)) {
                     <i class="fas fa-bed"></i>
                     <span>Phòng</span>
                 </a>
-
                 <a href="<?= $base ?>modules/staff/students/student_list.php" data-path="modules/staff/students/student_list.php">
-                     <i class="fas fa-user-graduate"></i>
-                     <span>Sinh viên</span>
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Sinh viên</span>
                 </a>
-
                 <a href="<?= $base ?>index.php" data-path="index.php">
                     <i class="fas fa-house-user"></i>
                     <span>Home</span>
                 </a>
-                
+
                 <div class="nav-underline"></div>
             </nav>
         </div>
 
         <div class="right">
-            <!-- Admin Chat AI Toggle -->
             <?php if ($userRole === 'Admin'): ?>
-                <div id="adminChatAiToggle" class="chat-ai-toggle" title="Trợ lý Admin">
+                <button id="adminChatAiToggle" class="chat-ai-toggle" title="Trợ lý AI" aria-label="Trợ lý AI">
                     <i class="fas fa-robot"></i>
-                </div>
+                </button>
             <?php endif; ?>
 
-            <!-- Theme Toggle -->
             <button class="theme-toggle" aria-label="Chế độ tối/sáng">
                 <i class="fa-regular fa-sun"></i>
                 <i class="fa-regular fa-moon"></i>
             </button>
 
-            <!-- Notifications -->
             <div class="notify">
                 <button class="notify-btn" aria-label="Thông báo">
                     <i class="fa-regular fa-bell"></i>
@@ -192,16 +208,14 @@ if ($userAvatar && !empty($userAvatar)) {
                 <div class="notify-menu">
                     <div class="notify-head">
                         <strong>Thông báo</strong>
-                        <button class="mark-read">Đánh dấu đã đọc</button>
+                        <button class="mark-read" type="button">Đánh dấu đã đọc</button>
                     </div>
                     <ul class="notify-list">
-                        <!-- JS renders items here -->
                         <li class="empty">Đang tải...</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Profile Dropdown -->
             <div class="admin-profile">
                 <button class="profile-btn" aria-haspopup="true" aria-expanded="false">
                     <img src="<?= htmlspecialchars($avatarPath) ?>" alt="Avatar" onerror="this.src='<?= $base ?>assets/img/avatars/user.png'">
@@ -227,22 +241,18 @@ if ($userAvatar && !empty($userAvatar)) {
         </div>
     </header>
 
-    <!-- Admin Chat AI Window -->
     <?php if ($userRole === 'Admin'): ?>
-    <div id="adminChatAiWindow" class="chat-ai-window">
-      <div class="chat-ai-header">
-        <span><i class="fas fa-robot"></i> AI Trợ lý Admin</span>
-        <button id="adminChatAiClose">&times;</button>
-      </div>
-      <div id="adminChatAiMessages" class="chat-ai-messages"></div>
-      <div class="chat-ai-input-area">
-        <input id="adminChatAiInput" type="text" placeholder="Hỏi AI: tổng quan, công nợ, phòng trống...">
-        <button id="adminChatAiSend"><i class="fas fa-paper-plane"></i></button>
-      </div>
-    </div>
+        <div id="adminChatAiWindow" class="chat-ai-window">
+            <div class="chat-ai-header">
+                <span><i class="fas fa-robot"></i> AI Trợ lý Admin</span>
+                <button id="adminChatAiClose">&times;</button>
+            </div>
+            <div id="adminChatAiMessages" class="chat-ai-messages"></div>
+            <div class="chat-ai-input-area">
+                <input id="adminChatAiInput" type="text" placeholder="Hỏi AI: tổng quan, công nợ, phòng trống...">
+                <button id="adminChatAiSend"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
     <?php endif; ?>
 
-
-    
-    <!-- Main Content Wrapper (Optional, to be closed by footer or page) -->
     <main class="app-main app-main--admin">

@@ -63,6 +63,7 @@ $capacity      = (int)$room['Capacity'];
 $occupantsLive = (int)$activeOccupants;
 $vacancyLive   = max(0, $capacity - $occupantsLive);
 $occupancyRate = $capacity > 0 ? ($occupantsLive / $capacity) * 100 : 0;
+$canAddStudent = $room['Status'] !== 'Báº£o trÃ¬' && $occupantsLive < $capacity;
 
 /* Trạng thái hiển thị (không ghi DB nếu Bảo trì) */
 $displayStatus = ($room['Status'] === 'Bảo trì')
@@ -138,7 +139,7 @@ function getInitials($name)
     <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/room/staff_rooms.css">
     <link rel="stylesheet" href="../../../assets/css/staff/room/staff_room_view.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -369,6 +370,9 @@ function getInitials($name)
 
         <!-- Nút hành động -->
         <div class="action-buttons">
+            <a href="room_add_student.php?room=<?= $id ?>" class="btn btn-add">
+                <i class="fas fa-user-plus"></i> ThÃªm sinh viÃªn
+            </a>
             <a href="room_edit.php?id=<?= $id ?>" class="btn btn-add">
                 <i class="fas fa-edit"></i> Chỉnh sửa phòng
             </a>
@@ -407,6 +411,27 @@ function getInitials($name)
             document.getElementById('imageModal').addEventListener('click', e => {
                 if (e.target === e.currentTarget) closeImageModal();
             });
+
+            <?php if (!$canAddStudent): ?>
+            const addStudentButton = document.querySelector('a[href="room_add_student.php?room=<?= $id ?>"]');
+            if (addStudentButton) {
+                addStudentButton.style.display = 'none';
+            }
+            <?php endif; ?>
+
+            const addStudentButtonByState = document.querySelector('a[href="room_add_student.php?room=<?= $id ?>"]');
+            const statusBadge = document.querySelector('.room-info .status-badge');
+            const usageText = document.querySelector('.progress-info span:last-child');
+            if (addStudentButtonByState) {
+                addStudentButtonByState.innerHTML = '<i class="fas fa-user-plus"></i> Thêm sinh viên';
+                const statusText = (statusBadge?.textContent || '').toLowerCase();
+                const usageMatch = (usageText?.textContent || '').match(/(\d+)\s*\/\s*(\d+)/);
+                const isMaintenance = /b.*tr/i.test(statusText);
+                const isFull = usageMatch ? Number(usageMatch[1]) >= Number(usageMatch[2]) : false;
+                if (isMaintenance || isFull) {
+                    addStudentButtonByState.style.display = 'none';
+                }
+            }
         </script>
 </body>
 

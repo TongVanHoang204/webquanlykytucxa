@@ -1,97 +1,133 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-include '../../../db_connect.php';
-include '../../../includes/auth_check.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once '../../../db_connect.php';
+require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
+
 requireRole(['Admin']);
+requirePost();
+requireCsrf();
 
-$id = (int)($_GET['id'] ?? 0);
-if ($id <= 0) die("❌ ID phòng không hợp lệ!");
+$id = (int)($_POST['id'] ?? 0);
+$confirmRoom = trim((string)($_POST['confirm_room'] ?? ''));
 
-// 🔍 Kiểm tra phòng có tồn tại không
-$roomRes = $conn->query("SELECT RoomNumber, CurrentOccupants, ImagePath FROM Rooms WHERE RoomID = $id");
-if (!$roomRes || $roomRes->num_rows === 0) {
-    $_SESSION['message'] = "❌ Không tìm thấy phòng cần xóa!";
-    $_SESSION['message_type'] = "error";
-    header("Location: rooms.php");
+if ($id <= 0) {
+    $_SESSION['message'] = 'ID phòng không hợp lệ.';
+    $_SESSION['message_type'] = 'error';
+    header('Location: rooms.php');
     exit;
 }
-$room = $roomRes->fetch_assoc();
 
-// 🚫 Kiểm tra có hợp đồng hiệu lực không (tức là vẫn có người đang ở)
-$activeContracts = $conn->query("
-    SELECT COUNT(*) AS cnt 
-    FROM Contracts 
-    WHERE RoomID = $id AND Status = 'Hiệu lực'
-")->fetch_assoc()['cnt'];
+$roomStmt = $conn->prepare('SELECT RoomNumber, CurrentOccupants, ImagePath FROM Rooms WHERE RoomID = ? LIMIT 1');
+$roomStmt->bind_param('i', $id);
+$roomStmt->execute();
+$room = $roomStmt->get_result()->fetch_assoc();
+$roomStmt->close();
 
-// 🚫 Hoặc kiểm tra phòng còn người đang ở (CurrentOccupants > 0)
+if (!$room) {
+    $_SESSION['message'] = 'Không tìm thấy phòng cần xóa.';
+    $_SESSION['message_type'] = 'error';
+    header('Location: rooms.php');
+    exit;
+}
+
+if ($confirmRoom === '' || strcasecmp($confirmRoom, (string)$room['RoomNumber']) !== 0) {
+    logRoomAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        'delete_denied',
+        'Từ chối xóa phòng do xác nhận không khớp: ID=' . $id,
+        'warning'
+    );
+    $_SESSION['message'] = "Xác nhận xóa không khớp số phòng <b>{$room['RoomNumber']}</b>.";
+    $_SESSION['message_type'] = 'error';
+    header('Location: rooms.php');
+    exit;
+}
+
+$activeContractStmt = $conn->prepare(
+    "SELECT COUNT(*) AS cnt
+     FROM Contracts
+     WHERE RoomID = ? AND Status = 'Hiệu lực'"
+);
+$activeContractStmt->bind_param('i', $id);
+$activeContractStmt->execute();
+$activeContracts = (int)($activeContractStmt->get_result()->fetch_assoc()['cnt'] ?? 0);
+$activeContractStmt->close();
+
 if ($activeContracts > 0 || (int)$room['CurrentOccupants'] > 0) {
-    $_SESSION['message'] = "⚠️ Không thể xóa phòng <b>{$room['RoomNumber']}</b> vì vẫn còn sinh viên đang ở!";
-    $_SESSION['message_type'] = "warning";
-    header("Location: rooms.php");
+    logRoomAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        'delete_denied',
+        'Từ chối xóa phòng ID=' . $id . ' vì vẫn còn sinh viên đang ở.',
+        'warning'
+    );
+    $_SESSION['message'] = "Không thể xóa phòng <b>{$room['RoomNumber']}</b> vì vẫn còn sinh viên đang ở.";
+    $_SESSION['message_type'] = 'warning';
+    header('Location: rooms.php');
     exit;
 }
 
-// ======================
-// 🔥 XÓA DỮ LIỆU LIÊN QUAN
-// ======================
 try {
     $conn->begin_transaction();
 
-    // Xóa hóa đơn liên quan đến hợp đồng trong phòng
     $conn->query("
-        DELETE FROM Invoices 
-        WHERE ContractID IN (SELECT ContractID FROM Contracts WHERE RoomID = $id)
+        DELETE FROM Invoices
+        WHERE ContractID IN (SELECT ContractID FROM Contracts WHERE RoomID = {$id})
     ");
 
-    // Xóa thanh toán liên quan
     $conn->query("
-        DELETE FROM Payments 
-        WHERE ContractID IN (SELECT ContractID FROM Contracts WHERE RoomID = $id)
+        DELETE FROM Payments
+        WHERE ContractID IN (SELECT ContractID FROM Contracts WHERE RoomID = {$id})
     ");
 
-    // Xóa phản ánh của sinh viên trong phòng (nếu có)
     $conn->query("
-        DELETE FROM Feedbacks 
+        DELETE FROM Feedbacks
         WHERE StudentID IN (
-            SELECT StudentID FROM Contracts WHERE RoomID = $id
+            SELECT StudentID FROM Contracts WHERE RoomID = {$id}
         )
     ");
 
-    // Xóa hợp đồng
-    $conn->query("DELETE FROM Contracts WHERE RoomID = $id");
+    $conn->query("DELETE FROM Contracts WHERE RoomID = {$id}");
+    $conn->query("DELETE FROM RoomRequests WHERE RoomID = {$id}");
 
-    // 🖼 Xóa ảnh chính nếu có
-    if (!empty($room['ImagePath']) && file_exists('../../' . $room['ImagePath'])) {
-        unlink('../../' . $room['ImagePath']);
+    if (!empty($room['ImagePath']) && file_exists('../../../' . $room['ImagePath'])) {
+        unlink('../../../' . $room['ImagePath']);
     }
 
-    // Xóa bản ghi phòng
-    $conn->query("DELETE FROM Rooms WHERE RoomID = $id");
+    $deleteRoomStmt = $conn->prepare('DELETE FROM Rooms WHERE RoomID = ?');
+    $deleteRoomStmt->bind_param('i', $id);
+    $deleteRoomStmt->execute();
+    $deleteRoomStmt->close();
 
     $conn->commit();
 
-    $_SESSION['message'] = "✅ Đã xóa phòng <b>{$room['RoomNumber']}</b> và toàn bộ dữ liệu liên quan.";
-    $_SESSION['message_type'] = "success";
-
-} catch (Exception $e) {
-    $conn->rollback();
-    $_SESSION['message'] = "❌ Lỗi khi xóa: " . $e->getMessage();
-    $_SESSION['message_type'] = "error";
-}
-
-if ($delStmt->execute()) {
-    addLog(
+    logRoomAction(
         $conn,
         $_SESSION['UserID'] ?? null,
-        'Delete room',
-        'Rooms',
-        "Xóa phòng ID={$roomID}",
-        'system'
+        'delete',
+        'Đã xóa phòng ID=' . $id . ' - Số phòng: ' . $room['RoomNumber'],
+        'history'
     );
+
+    $_SESSION['message'] = "Đã xóa phòng <b>{$room['RoomNumber']}</b> và dữ liệu liên quan.";
+    $_SESSION['message_type'] = 'success';
+} catch (Throwable $e) {
+    $conn->rollback();
+    logRoomAction(
+        $conn,
+        $_SESSION['UserID'] ?? null,
+        'delete_failed',
+        'Xóa phòng thất bại: ID=' . $id . ' - ' . $e->getMessage(),
+        'warning'
+    );
+    $_SESSION['message'] = 'Lỗi khi xóa phòng: ' . $e->getMessage();
+    $_SESSION['message_type'] = 'error';
 }
 
-
-header("Location: rooms.php");
+header('Location: rooms.php');
 exit;
-?>

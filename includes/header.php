@@ -2,26 +2,22 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-// Điều chỉnh đường dẫn require phù hợp với cấu trúc thư mục thực tế của bạn
-require_once __DIR__ . '/../db_connect.php'; 
+
+require_once __DIR__ . '/../db_connect.php';
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/log_helper.php';
 require_once __DIR__ . '/error_handler.php';
 
-// Lấy thông tin user
-$isLoggedIn  = isset($_SESSION['UserID']);
-$role        = $_SESSION['Role'] ?? 'Guest';
+$isLoggedIn = isset($_SESSION['UserID']);
+$role = $_SESSION['Role'] ?? 'Guest';
 $displayName = $_SESSION['FullName'] ?? $_SESSION['Username'] ?? 'Tài khoản';
 $pageTitle = $pageTitle ?? 'Ký túc xá Sinh viên';
 $pageBodyClass = trim('app-shell app-shell--user ' . ($pageBodyClass ?? ''));
 $pageStylesheets = $pageStylesheets ?? [];
 
-// Active menu logic
-$currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-/* Configure Base Path */
+$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 $base = '/';
-if (strpos($_SERVER['REQUEST_URI'], '/WEBQuanLyKyTucXa') === 0) {
+if (strpos($_SERVER['REQUEST_URI'] ?? '', '/WEBQuanLyKyTucXa') === 0) {
     $base = '/WEBQuanLyKyTucXa/';
 }
 
@@ -31,35 +27,43 @@ function nav_active($path)
     return $currentPath === $path ? 'active' : '';
 }
 
-/* ========= Avatar từ DB / Session ========= */
 $avatarUrl = '/assets/img/avatars/user.png';
-
 if (!empty($_SESSION['UserID'])) {
-    $userID = (int)$_SESSION['UserID'];
-
+    $userId = (int) $_SESSION['UserID'];
     if (!empty($_SESSION['Avatar'])) {
         $avatarUrl = $_SESSION['Avatar'];
     } elseif (isset($conn) && $conn instanceof mysqli) {
-        $sqlAvt = "SELECT Avatar FROM Students WHERE UserID = ? LIMIT 1";
-        if ($stAvt = $conn->prepare($sqlAvt)) {
-            $stAvt->bind_param("i", $userID);
-            $stAvt->execute();
-            $avtRes = $stAvt->get_result();
-            if ($avtRes && $rowAvt = $avtRes->fetch_assoc()) {
-                if (!empty($rowAvt['Avatar'])) {
-                    $avatarUrl = $rowAvt['Avatar'];
-                    $_SESSION['Avatar'] = $avatarUrl;
-                }
+        $stmt = $conn->prepare('SELECT Avatar FROM Students WHERE UserID = ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('i', $userId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result instanceof mysqli_result && ($row = $result->fetch_assoc()) && !empty($row['Avatar'])) {
+                $avatarUrl = $row['Avatar'];
+                $_SESSION['Avatar'] = $avatarUrl;
             }
-            $stAvt->close();
+            $stmt->close();
         }
     }
 }
-?>
 
+$hasRoom = false;
+if ($isLoggedIn && $role === 'Student' && isset($conn) && $conn instanceof mysqli) {
+    $userId = (int) $_SESSION['UserID'];
+    $checkRoom = $conn->query(
+        "SELECT c.ContractID
+         FROM Contracts c
+         INNER JOIN Students s ON c.StudentID = s.StudentID
+         WHERE s.UserID = {$userId} AND c.Status = 'Hiệu lực'
+         LIMIT 1"
+    );
+    if ($checkRoom instanceof mysqli_result && $checkRoom->num_rows > 0) {
+        $hasRoom = true;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,10 +78,12 @@ if (!empty($_SESSION['UserID'])) {
         <link rel="stylesheet" href="<?= htmlspecialchars(preg_match('/^(https?:)?\/\//', $stylesheet) ? $stylesheet : $base . ltrim($stylesheet, '/')) ?>">
     <?php endforeach; ?>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/vendor/fonts/fonts.css">
+    <script src="<?= $base ?>assets/js/user_header.js" defer></script>
 </head>
 
-<body<?= $pageBodyClass !== '' ? ' class="' . htmlspecialchars($pageBodyClass) . '"' : '' ?>>
+<body<?= $pageBodyClass !== '' ? ' class="' . htmlspecialchars($pageBodyClass) . '"' : '' ?> data-base="<?= htmlspecialchars($base, ENT_QUOTES) ?>">
     <header class="admin-header">
         <div class="left">
             <a href="<?= $base ?>index.php" class="logo">
@@ -105,7 +111,11 @@ if (!empty($_SESSION['UserID'])) {
             </a>
             <a href="<?= $base ?>modules/user/accesslogs.php" class="<?= nav_active($base . 'modules/user/accesslogs.php') ?>">
                 <i class="fas fa-newspaper"></i>
-                <span>Bảng tin</span>
+                <span>Bảng tin KTX</span>
+            </a>
+            <a href="<?= $base ?>modules/user/community/community_list.php" class="<?= nav_active($base . 'modules/user/community/community_list.php') ?>">
+                <i class="fas fa-store"></i>
+                <span>Chợ KTX</span>
             </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php" class="<?= nav_active($base . 'modules/user/rooms/rooms.php') ?>">
                 <i class="fas fa-bed"></i>
@@ -115,19 +125,18 @@ if (!empty($_SESSION['UserID'])) {
                 <i class="fas fa-comments"></i>
                 <span>Phản ánh</span>
             </a>
+            <?php if ($role === 'Student'): ?>
+                <a href="<?= $base ?>modules/user/access_qr.php" class="<?= nav_active($base . 'modules/user/access_qr.php') ?>">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Mã QR cổng</span>
+                </a>
+                <a href="<?= $base ?>modules/user/gate_history.php" class="<?= nav_active($base . 'modules/user/gate_history.php') ?>">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span>Lịch sử ra/vào</span>
+                </a>
+            <?php endif; ?>
 
-            <?php
-            // Chỉ hiển thị cho sinh viên chưa có phòng
-            $hasRoom = false;
-            if ($isLoggedIn && $role === 'Student' && isset($conn)) {
-                $userID = (int)$_SESSION['UserID'];
-                $checkRoom = $conn->query("SELECT c.ContractID FROM Contracts c INNER JOIN Students s ON c.StudentID = s.StudentID WHERE s.UserID = $userID AND c.Status = 'Hiệu lực' LIMIT 1");
-                if ($checkRoom && $checkRoom->num_rows > 0) {
-                    $hasRoom = true;
-                }
-            }
-            if (!$hasRoom && $role === 'Student'):
-            ?>
+            <?php if (!$hasRoom && $role === 'Student'): ?>
                 <a href="<?= $base ?>modules/user/room_requests/request_list.php" class="<?= nav_active($base . 'modules/user/room_requests/request_list.php') ?>">
                     <i class="fas fa-hand-pointer"></i>
                     <span>Yêu cầu của tôi</span>
@@ -136,7 +145,6 @@ if (!empty($_SESSION['UserID'])) {
         </nav>
 
         <div class="right">
-
             <button id="themeToggle" class="theme-toggle" type="button" aria-label="Đổi giao diện">
                 <i class="fas fa-sun"></i>
                 <i class="fas fa-moon"></i>
@@ -171,15 +179,13 @@ if (!empty($_SESSION['UserID'])) {
             <div class="admin-profile">
                 <?php if ($isLoggedIn): ?>
                     <button class="profile-btn" type="button" id="profileBtn">
-                        <img src="<?= htmlspecialchars($avatarUrl) ?>"
-                            alt="Avatar"
-                            onerror="this.onerror=null;this.src='<?= $base ?>assets/img/avatars/user.png';">
+                        <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Avatar" onerror="this.onerror=null;this.src='<?= $base ?>assets/img/avatars/user.png';">
                         <span class="name"><?= htmlspecialchars($displayName) ?></span>
                         <span class="caret"><i class="fas fa-chevron-down"></i></span>
                     </button>
 
                     <div class="dropdown-menu" id="profileMenu">
-                        <?php if (in_array($role, ['Admin', 'Manager'])): ?>
+                        <?php if (in_array($role, ['Admin', 'Manager'], true)): ?>
                             <a href="<?= $base ?>modules/staff/dashboard.php">
                                 <i class="fas fa-gauge"></i>
                                 <span>Trang quản trị</span>
@@ -213,7 +219,10 @@ if (!empty($_SESSION['UserID'])) {
                 <i class="fas fa-user-graduate"></i><span>Trang sinh viên</span>
             </a>
             <a href="<?= $base ?>modules/user/accesslogs.php">
-                <i class="fas fa-newspaper"></i><span>Bảng tin</span>
+                <i class="fas fa-newspaper"></i><span>Bảng tin KTX</span>
+            </a>
+            <a href="<?= $base ?>modules/user/community/community_list.php">
+                <i class="fas fa-store"></i><span>Chợ KTX</span>
             </a>
             <a href="<?= $base ?>modules/user/rooms/rooms.php">
                 <i class="fas fa-bed"></i><span>Phòng ở</span>
@@ -221,9 +230,17 @@ if (!empty($_SESSION['UserID'])) {
             <a href="<?= $base ?>modules/user/feedbacks.php">
                 <i class="fas fa-comments"></i><span>Phản ánh</span>
             </a>
+            <?php if ($role === 'Student'): ?>
+                <a href="<?= $base ?>modules/user/access_qr.php">
+                    <i class="fas fa-qrcode"></i><span>Mã QR cổng</span>
+                </a>
+                <a href="<?= $base ?>modules/user/gate_history.php">
+                    <i class="fas fa-clock-rotate-left"></i><span>Lịch sử ra/vào</span>
+                </a>
+            <?php endif; ?>
 
             <?php if (!$hasRoom && $role === 'Student'): ?>
-                <a href="<?= $base ?>modules/user/room_requests/request_list">
+                <a href="<?= $base ?>modules/user/room_requests/request_list.php">
                     <i class="fas fa-hand-pointer"></i><span>Yêu cầu của tôi</span>
                 </a>
             <?php endif; ?>
@@ -239,7 +256,6 @@ if (!empty($_SESSION['UserID'])) {
             <?php endif; ?>
         </div>
     </nav>
-
 
     <div class="chat-ai-widget">
         <div class="chat-ai-window" id="chatAiWindow">
@@ -267,7 +283,7 @@ if (!empty($_SESSION['UserID'])) {
             </div>
 
             <div class="chat-ai-input">
-                <input type="text" id="chatAiInput" placeholder="Nhập câu hỏi của bạn..." />
+                <input type="text" id="chatAiInput" placeholder="Nhập câu hỏi của bạn...">
                 <button id="chatAiSend">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -277,7 +293,6 @@ if (!empty($_SESSION['UserID'])) {
 
     <script src="<?= $base ?>assets/js/chat_ai_widget.js"></script>
     <script>
-        // ========== THEME TOGGLE ==========
         const body = document.body;
         const themeToggle = document.getElementById('themeToggle');
         const savedTheme = localStorage.getItem('ktx-theme') || 'dark';
@@ -291,128 +306,11 @@ if (!empty($_SESSION['UserID'])) {
             });
         }
 
-        // ========== NOTIFY ==========
-        document.addEventListener('DOMContentLoaded', () => {
-            const wrap = document.querySelector('.notify');
-            if (!wrap) return;
-
-            const btn = wrap.querySelector('.notify-btn');
-            const menu = wrap.querySelector('.notify-menu');
-            const list = wrap.querySelector('.notify-list');
-            const dot = wrap.querySelector('.dot');
-            const markRead = wrap.querySelector('.mark-read');
-
-            function formatTime(str) {
-                const d = new Date(str);
-                if (isNaN(d.getTime())) return str;
-                return d.toLocaleString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            }
-
-            async function loadNotifications() {
-                try {
-                    const res = await fetch('<?= $base ?>modules/api/get_notifications.php', {
-                        cache: 'no-store'
-                    });
-                    if (!res.ok) return;
-
-                    const data = await res.json();
-                    list.innerHTML = '';
-
-                    if (!data || data.length === 0) {
-                        list.innerHTML = '<li class="empty">Chưa có thông báo mới</li>';
-                        dot.hidden = true;
-                        return;
-                    }
-
-                    let unread = 0;
-                    const maxDisplay = 5; // Hiển thị tối đa 5 thông báo
-                    data.slice(0, maxDisplay).forEach(n => {
-                        const isUnread = Number(n.IsRead) === 0;
-                        if (isUnread) unread++;
-
-                        const li = document.createElement('li');
-                        li.className = 'notify-item' + (isUnread ? ' unread' : '');
-                        li.setAttribute('data-type', n.Type || 'invoice');
-                        li.innerHTML = `
-                        <div class="notify-content">
-                            <div class="notify-title">${n.Title}</div>
-                            <div class="notify-message">${n.Message}</div>
-                            <div class="notify-meta">
-                                <span class="notify-time">${formatTime(n.CreatedAt)}</span>
-                                ${n.Link ? `<button class="notify-view" type="button" onclick="window.location.href='${n.Link}'">Xem</button>` : ''}
-                            </div>
-                        </div>
-                    `;
-                        list.appendChild(li);
-                    });
-
-                    dot.hidden = unread === 0;
-                } catch (e) {
-                    console.error('Không tải được thông báo', e);
-                }
-            }
-
-            async function markAllRead() {
-                try {
-                    const res = await fetch('<?= $base ?>modules/api/mark_read_notifications.php', {
-                        method: 'POST'
-                    });
-                    const text = await res.text();
-                    let data = null;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {}
-
-                    if (!res.ok || !data || data.ok !== true) return;
-
-                    await loadNotifications();
-                } catch (e) {
-                    console.error('Mark read error', e);
-                }
-            }
-
-            let opened = false;
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                opened = !opened;
-                menu.classList.toggle('show', opened);
-                if (opened) {
-                    await markAllRead();
-                }
-            });
-
-            if (markRead) {
-                markRead.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    markAllRead();
-                });
-            }
-
-            document.addEventListener('click', (e) => {
-                if (!wrap.contains(e.target)) {
-                    menu.classList.remove('show');
-                    opened = false;
-                }
-            });
-
-            loadNotifications();
-            // Tự động reload thông báo mỗi 30s
-            setInterval(loadNotifications, 30000);
-        });
-
-        // ========== PROFILE MENU ==========
         const profileBtn = document.getElementById('profileBtn');
         const profileMenu = document.getElementById('profileMenu');
-
         if (profileBtn && profileMenu) {
-            profileBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
+            profileBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
                 profileMenu.classList.toggle('show');
             });
 
@@ -421,20 +319,18 @@ if (!empty($_SESSION['UserID'])) {
             });
         }
 
-        // ========== MOBILE DRAWER ==========
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const mobileDrawer = document.getElementById('mobileDrawer');
-
         if (hamburgerBtn && mobileDrawer) {
-            hamburgerBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
+            hamburgerBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
                 hamburgerBtn.classList.toggle('active');
                 mobileDrawer.classList.toggle('open');
                 body.classList.toggle('no-scroll');
             });
 
-            document.addEventListener('click', (e) => {
-                if (!mobileDrawer.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            document.addEventListener('click', (event) => {
+                if (!mobileDrawer.contains(event.target) && !hamburgerBtn.contains(event.target)) {
                     hamburgerBtn.classList.remove('active');
                     mobileDrawer.classList.remove('open');
                     body.classList.remove('no-scroll');

@@ -1,26 +1,26 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include '../../../db_connect.php';
+require_once '../../../includes/auth_check.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// ✅ Kiểm tra quyền
-if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Manager'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Bạn không có quyền xóa hóa đơn!']);
+requireRole(['Admin', 'Manager']);
+requirePost();
+requireCsrf();
+
+if (empty($_POST['id'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ!'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// ✅ Kiểm tra dữ liệu gửi lên
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ!']);
-    exit;
-}
+$id = (int)$_POST['id'];
 
-$id = intval($_POST['id']);
-
-// 🔍 Lấy thông tin hóa đơn (để lấy trạng thái, tên SV & tháng)
 $stmt = $conn->prepare("
-    SELECT 
+    SELECT
         i.InvoiceID, i.Month, i.Year, i.Status,
         s.FullName, s.StudentCode
     FROM Invoices i
@@ -34,25 +34,21 @@ $res = $stmt->get_result();
 $invoice = $res->fetch_assoc();
 
 if (!$invoice) {
-    echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy hóa đơn!']);
+    echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy hóa đơn!'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// 🚫 Chặn xóa nếu hóa đơn chưa thanh toán
 if ($invoice['Status'] === 'Chưa thanh toán') {
     echo json_encode([
         'status' => 'error',
-        'message' => '❌ Không thể xóa hóa đơn chưa thanh toán! Vui lòng xác nhận thanh toán hoặc hủy hợp đồng trước.'
-    ]);
+        'message' => 'Không thể xóa hóa đơn chưa thanh toán! Vui lòng xác nhận thanh toán hoặc hủy hợp đồng trước.'
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// 📝 Ghi log hành động
 $admin = $_SESSION['FullName'] ?? 'Người quản lý';
-$conn->query("INSERT INTO ActionLogs (Action, PerformedBy, CreatedAt)
-              VALUES ('Xóa hóa đơn #$id', '$admin', NOW())");
+$conn->query("INSERT INTO ActionLogs (Action, PerformedBy, CreatedAt) VALUES ('Xóa hóa đơn #$id', '$admin', NOW())");
 
-// 🗑️ Xóa hóa đơn (tạm tắt kiểm tra khóa ngoại)
 $conn->query("SET FOREIGN_KEY_CHECKS=0");
 $delete = $conn->prepare("DELETE FROM Invoices WHERE InvoiceID = ?");
 $delete->bind_param("i", $id);
@@ -60,15 +56,15 @@ $success = $delete->execute();
 $conn->query("SET FOREIGN_KEY_CHECKS=1");
 
 if ($success) {
-    $studentName = $invoice['FullName'] ?? 'Sinh viên không tên';
+    $studentName = $invoice['FullName'] ?? 'Sinh viên';
     $month = $invoice['Month'] ?? '';
-    $year  = $invoice['Year'] ?? '';
+    $year = $invoice['Year'] ?? '';
     echo json_encode([
         'status' => 'success',
         'message' => "Đã xóa hóa đơn tháng {$month}/{$year} của sinh viên {$studentName} thành công!"
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Không thể xóa hóa đơn: ' . $conn->error]);
+    echo json_encode(['status' => 'error', 'message' => 'Không thể xóa hóa đơn: ' . $conn->error], JSON_UNESCAPED_UNICODE);
 }
 
 $conn->close();

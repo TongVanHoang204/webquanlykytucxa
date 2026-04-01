@@ -2,9 +2,12 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
-requireRole(['Admin']);
 
 header('Content-Type: application/json; charset=utf-8');
+
+requireRole(['Admin', 'Manager']);
+requirePost();
+requireCsrf();
 
 $id = (int)($_POST['id'] ?? 0);
 if ($id <= 0) {

@@ -1,72 +1,70 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-header('Content-Type: application/json; charset=utf-8');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Tắt mọi output thừa
+header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 require_once '../../../db_connect.php';
-// KHÔNG include admin_header.php (in HTML)
-// KHÔNG include file nào in ra HTML
+require_once '../../../includes/auth_check.php';
 
-// Bảo vệ quyền
-if (empty($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Manager'])) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Bạn không có quyền cập nhật hóa đơn!']);
-    exit;
-}
+requireRole(['Admin', 'Manager']);
+requirePost();
+requireCsrf();
 
-// Chỉ nhận POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['id'])) {
+if (empty($_POST['id'])) {
     http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ!']);
+    echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ!'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $id = (int)$_POST['id'];
 
-// Kiểm tra tồn tại
 $sql = "
     SELECT i.InvoiceID, i.Status, s.FullName
     FROM Invoices i
     JOIN Contracts c ON i.ContractID = c.ContractID
-    JOIN Students  s ON c.StudentID = s.StudentID
-    WHERE i.InvoiceID = ?";
+    JOIN Students s ON c.StudentID = s.StudentID
+    WHERE i.InvoiceID = ?
+";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Lỗi prepare: '.$conn->error]);
+    echo json_encode(['status' => 'error', 'message' => 'Lỗi prepare: ' . $conn->error], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $info = $stmt->get_result()->fetch_assoc();
 
 if (!$info) {
     http_response_code(404);
-    echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy hóa đơn!']);
-    exit;
-}
-if ($info['Status'] === 'Đã thanh toán') {
-    echo json_encode(['status' => 'warning', 'message' => 'Hóa đơn đã ở trạng thái ĐÃ THANH TOÁN.']);
+    echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy hóa đơn!'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// Cập nhật trạng thái
-$upd = $conn->prepare("UPDATE Invoices SET Status='Đã thanh toán', PaidAt=NOW() WHERE InvoiceID=?");
-if (!$upd) {
-    http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Lỗi prepare update: '.$conn->error]);
+if ($info['Status'] === 'Đã thanh toán') {
+    echo json_encode(['status' => 'warning', 'message' => 'Hóa đơn đã ở trạng thái ĐÃ THANH TOÁN.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+$upd = $conn->prepare("UPDATE Invoices SET Status = 'Đã thanh toán', PaidAt = NOW() WHERE InvoiceID = ?");
+if (!$upd) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Lỗi prepare update: ' . $conn->error], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $upd->bind_param("i", $id);
 
 if ($upd->execute()) {
     echo json_encode([
-        'status'  => 'success',
-        'message' => "Đã cập nhật hóa đơn của sinh viên <b>".htmlspecialchars($info['FullName'])."</b> thành <strong>ĐÃ THANH TOÁN</strong>!"
-    ]);
+        'status' => 'success',
+        'message' => "Đã cập nhật hóa đơn của sinh viên <b>" . htmlspecialchars($info['FullName']) . "</b> thành <strong>ĐÃ THANH TOÁN</strong>!"
+    ], JSON_UNESCAPED_UNICODE);
 } else {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Lỗi khi cập nhật: '.$conn->error]);
+    echo json_encode(['status' => 'error', 'message' => 'Lỗi khi cập nhật: ' . $conn->error], JSON_UNESCAPED_UNICODE);
 }

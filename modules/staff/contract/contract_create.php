@@ -2,6 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 requireRole(['Admin']);
 
 /* CSRF token: tạo 1 lần, giữ đến khi submit thành công */
@@ -146,6 +147,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // ✅ Thành công
                 $conn->commit();
+                $createdContract = true;
+        if ($createdContract) {
+            logContractAction(
+                $conn,
+                $_SESSION['UserID'] ?? null,
+                'create',
+                "Táº¡o há»£p Ä‘á»“ng cho StudentID={$studentID}, RoomID={$roomID}",
+                'activity'
+            );
+        }
 
                 unset($_SESSION['_csrf']); // tránh double submit
                 $_SESSION['message'] = "✅ Thêm hợp đồng mới thành công!";
@@ -154,14 +165,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             } catch (Exception $ex) {
                 $conn->rollback();
+                logContractAction(
+                    $conn,
+                    $_SESSION['UserID'] ?? null,
+                    'create_failed',
+                    "Táº¡o há»£p Ä‘á»“ng tháº¥t báº¡i cho StudentID={$studentID}, RoomID={$roomID}: " . $ex->getMessage(),
+                    'warning'
+                );
                 $error = "❌ " . $ex->getMessage();
             }
         }
-        addLog(
+        logContractAction(
             $conn,
             $_SESSION['UserID'] ?? null,
-            'Create contract',
-            'Contracts',
+            'create',
             "Tạo hợp đồng cho StudentID={$studentID}, RoomID={$roomID}",
             'activity'
         );
@@ -199,7 +216,7 @@ require_once '../../../includes/admin_header.php';
     <link rel="icon" href="/assets/img/favicon.ico">
 
     <!-- Libs -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />

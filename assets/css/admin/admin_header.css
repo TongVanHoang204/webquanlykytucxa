@@ -311,6 +311,7 @@ html[data-theme="dark"] .theme-toggle .fa-moon {
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -471,20 +472,22 @@ html[data-theme="dark"] .theme-toggle .fa-moon {
     }
 }
 
-/* Chat AI Button (Admin custom if needed) */
+/* Chat AI Button */
 .chat-ai-toggle {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
-    color: white;
+    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    color: var(--muted);
     display: grid;
     place-items: center;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
-    transition: transform 0.2s;
+    font-size: 16px;
+    transition: all 0.2s ease;
 }
 
 .chat-ai-toggle:hover {
-    transform: scale(1.05);
+    color: var(--text);
+    border-color: var(--brand);
 }

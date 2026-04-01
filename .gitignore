@@ -14,3 +14,9 @@ node_modules/
 
 # Logs
 *.log
+
+# Temp import files
+uploads/imports/import_*.xlsx
+
+# Local worktrees
+.worktrees/

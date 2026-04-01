@@ -4,9 +4,10 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
+require_once '../../../includes/log_helper.php';
 
 // Chỉ Admin & Manager được truy cập
-requireRole(['Admin']);
+requireRole(['Admin', 'Manager']);
 
 /* ===================== CSRF token ===================== */
 if (empty($_SESSION['_csrf'])) {
@@ -81,6 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $newId = $stmt->insert_id;
+            logBuildingAction(
+                $conn,
+                $_SESSION['UserID'] ?? null,
+                'create',
+                "Tạo tòa nhà ID={$newId} - Tên: {$old['BuildingName']}",
+                'activity'
+            );
             $okMsg = "Tạo tòa nhà thành công (ID #{$newId}).";
             // Xóa giá trị cũ sau khi thành công
             $old = ['BuildingName' => '', 'Description' => '', 'Floors' => ''];
@@ -99,8 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
   <link rel="stylesheet" href="/assets/css/staff/buildings/building_create.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
+  <link href="../../../assets/vendor/fonts/fonts.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -414,7 +422,7 @@ function getTotalRooms($conn) {
 }
 
 function getAvailableRooms($conn) {
-    $result = $conn->query("SELECT COUNT(*) as total FROM Rooms WHERE Status = 'available'");
+    $result = $conn->query("SELECT COUNT(*) as total FROM Rooms WHERE Status = 'Trống'");
     return $result ? $result->fetch_assoc()['total'] : 0;
 }
 ?>

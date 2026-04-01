@@ -1,84 +1,46 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once '../../db_connect.php';
-
-if (empty($_SESSION['UserID'])) {
-    http_response_code(401);
-    echo json_encode(['ok' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-$userId = (int)$_SESSION['UserID'];
+require_once __DIR__ . '/../../db_connect.php';
+require_once __DIR__ . '/../../includes/auth_check.php';
+require_once __DIR__ . '/../../includes/notification_service.php';
 
 try {
-    /* GET STUDENT ID */
-    $stmt = $conn->prepare("SELECT StudentID FROM Students WHERE UserID = ? LIMIT 1");
-    $stmt->bind_param('i', $userId);
-    $stmt->execute();
-    $res = $stmt->get_result();
+    requireLogin();
+    requirePost();
 
-    if (!$res || !$res->num_rows) {
-        echo json_encode(['ok' => false, 'msg' => 'Not a student']);
-        exit;
+    $userId = (int) ($_SESSION['UserID'] ?? 0);
+    if ($userId <= 0) {
+        throw new RuntimeException('Phiên đăng nhập không hợp lệ.');
     }
 
-    $studentId = (int)$res->fetch_assoc()['StudentID'];
-    $stmt->close();
-
-
-    /* MARK INVOICE READ */
-    $sql1 = "
-        INSERT INTO InvoiceNotificationReads (InvoiceID, StudentID)
-    SELECT i.InvoiceID, ?
-    FROM Invoices i
-    INNER JOIN Contracts c ON i.ContractID = c.ContractID
-    LEFT JOIN InvoiceNotificationReads r 
-    ON r.InvoiceID = i.InvoiceID AND r.StudentID = ?
-    WHERE c.StudentID = ?
-        AND i.Status = 'Chưa thanh toán'
-        AND r.InvoiceID IS NULL )";
-
-    $stmt = $conn->prepare($sql1);
-    if (!$stmt) {
-        throw new Exception("SQL1 ERROR: " . $conn->error);
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input)) {
+        $input = $_POST;
     }
 
-    $stmt->bind_param('iii', $studentId, $studentId, $studentId);
-    $stmt->execute();
-    $stmt->close();
+    $notificationId = isset($input['notification_id']) ? (int) $input['notification_id'] : 0;
+    $markAll = !empty($input['mark_all']) || $notificationId <= 0;
 
-
-    /* MARK ANNOUNCEMENT READ */
-    $sql2 = "
-        INSERT INTO AnnouncementViews (AnnouncementID, StudentID, ViewedAt)
-        SELECT a.AnnouncementID, ?, NOW()
-        FROM announcements a
-        WHERE NOT EXISTS (
-            SELECT 1 FROM AnnouncementViews v 
-            WHERE v.AnnouncementID = a.AnnouncementID 
-              AND v.StudentID = ?
-        )
-    ";
-
-    $stmt = $conn->prepare($sql2);
-    if (!$stmt) {
-        throw new Exception("SQL2 ERROR: " . $conn->error);
+    if ($markAll) {
+        $marked = markAllUserNotificationsRead($conn, $userId);
+    } else {
+        $marked = markUserNotificationRead($conn, $userId, $notificationId) ? 1 : 0;
     }
 
-    $stmt->bind_param('ii', $studentId, $studentId);
-    $stmt->execute();
-    $stmt->close();
-
-
-    echo json_encode(['ok' => true]);
+    echo json_encode([
+        'ok' => true,
+        'marked' => $marked,
+        'mode' => $markAll ? 'all' : 'single',
+    ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    echo json_encode([
+        'ok' => false,
+        'error' => $e->getMessage(),
+    ], JSON_UNESCAPED_UNICODE);
 }

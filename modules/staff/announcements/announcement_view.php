@@ -6,6 +6,11 @@ require_once '../../../includes/admin_header.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']); // ai cũng có thể xem, sửa xóa vẫn check role ở nút
 
+if (empty($_SESSION['_csrf'])) {
+    $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['_csrf'];
+
 // Sau khi tạo $conn
 $conn->set_charset('utf8mb4');
 $conn->query("SET collation_connection = 'utf8mb4_unicode_ci'");
@@ -89,12 +94,13 @@ $canManage = in_array($_SESSION['Role'] ?? '', ['Admin', 'Manager']);
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= h($csrf) ?>">
     <title>Xem thông báo | Hệ thống Ký túc xá</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../assets/css/admin/admin_header.css">
     <link rel="stylesheet" href="../../../assets/css/staff/announcements/announcement_view.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../../assets/vendor/fontawesome/css/all.min.css">
+    <link href="../../../assets/vendor/fonts/fonts.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -186,6 +192,8 @@ $canManage = in_array($_SESSION['Role'] ?? '', ['Admin', 'Manager']);
     </div>
 
     <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
         function deleteAnnouncement(id, title) {
             Swal.fire({
                 title: 'Xóa thông báo?',
@@ -202,10 +210,13 @@ $canManage = in_array($_SESSION['Role'] ?? '', ['Admin', 'Manager']);
                 fetch('announcement_delete_api.php', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: new URLSearchParams({
-                        id
+                        id,
+                        _csrf: CSRF_TOKEN
                     })
                 }).then(r => r.json()).then(data => {
                     if (data.status === 'success') {

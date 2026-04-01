@@ -8,6 +8,8 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import mysql from "mysql2/promise";
+import crypto from "node:crypto";
+import { WebSocketServer } from "ws";
 
 // ======================================================================
 // 0️⃣ CONFIG
@@ -15,9 +17,18 @@ import mysql from "mysql2/promise";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemini-3-flash-preview:cloud"; // ví dụ: llama3.2, gemma3, mistral...
+const REALTIME_SHARED_SECRET =
+  process.env.WAVE1_REALTIME_SECRET ||
+  process.env.REALTIME_SHARED_SECRET ||
+  process.env.APP_KEY ||
+  process.env.JWT_SECRET ||
+  "";
+const REALTIME_PUBLISH_SECRET =
+  process.env.WAVE1_REALTIME_PUBLISH_SECRET || REALTIME_SHARED_SECRET;
 
 console.log("🤖 OLLAMA_HOST:", OLLAMA_HOST);
 console.log("🤖 OLLAMA_MODEL:", OLLAMA_MODEL);
+console.log("📡 REALTIME:", REALTIME_SHARED_SECRET ? "enabled" : "disabled (missing secret)");
 
 // ======================================================================
 // 1️⃣ KẾT NỐI DATABASE
@@ -38,6 +49,127 @@ const db = mysql.createPool({
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ======================================================================
+// 2.5️⃣ REALTIME HUB
+// ======================================================================
+
+const websocketClients = new Map();
+
+function realtimeBase64UrlDecode(value) {
+  const padding = value.length % 4;
+  const normalized = (padding ? value + "=".repeat(4 - padding) : value)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  return Buffer.from(normalized, "base64").toString("utf8");
+}
+
+function verifyRealtimeToken(token, secret) {
+  if (!token || !secret || typeof token !== "string") {
+    return null;
+  }
+
+  const parts = token.split(".", 2);
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+
+  const [body, signature] = parts;
+  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(realtimeBase64UrlDecode(body));
+    const uid = Number(payload?.uid || 0);
+    const role = String(payload?.role || "");
+    const exp = Number(payload?.exp || 0);
+    if (!uid || !role || !exp || exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function addRealtimeClient(userId, socket) {
+  const key = String(userId);
+  const current = websocketClients.get(key) || new Set();
+  current.add(socket);
+  websocketClients.set(key, current);
+}
+
+function removeRealtimeClient(userId, socket) {
+  const key = String(userId);
+  const current = websocketClients.get(key);
+  if (!current) {
+    return;
+  }
+
+  current.delete(socket);
+  if (!current.size) {
+    websocketClients.delete(key);
+  }
+}
+
+function publishRealtimeEvent(userIds, event, payload) {
+  const normalizedUserIds = [
+    ...new Set((userIds || []).map((value) => Number(value)).filter(Boolean)),
+  ];
+  const packet = JSON.stringify({
+    event: event || "notification.created",
+    payload: payload || {},
+    sentAt: new Date().toISOString(),
+  });
+
+  let deliveredConnections = 0;
+  normalizedUserIds.forEach((userId) => {
+    const sockets = websocketClients.get(String(userId));
+    if (!sockets) {
+      return;
+    }
+
+    sockets.forEach((socket) => {
+      if (socket.readyState === socket.OPEN) {
+        socket.send(packet);
+        deliveredConnections += 1;
+      }
+    });
+  });
+
+  return {
+    targetedUsers: normalizedUserIds.length,
+    deliveredConnections,
+  };
+}
+
+app.post("/api/realtime/publish", (req, res) => {
+  if (!REALTIME_PUBLISH_SECRET) {
+    return res.status(503).json({
+      ok: false,
+      error: "REALTIME_NOT_CONFIGURED",
+    });
+  }
+
+  const providedSecret = req.get("X-Realtime-Publish-Secret") || "";
+  if (providedSecret !== REALTIME_PUBLISH_SECRET) {
+    return res.status(403).json({
+      ok: false,
+      error: "FORBIDDEN",
+    });
+  }
+
+  const userIds = Array.isArray(req.body?.userIds) ? req.body.userIds : [];
+  const result = publishRealtimeEvent(userIds, req.body?.event, req.body?.payload);
+
+  return res.json({
+    ok: true,
+    ...result,
+  });
+});
 
 // ======================================================================
 // 3️⃣ OLLAMA CHAT HELPER
@@ -971,6 +1103,58 @@ Nếu không có dữ liệu phù hợp, hãy trả lời trung thực và gợi
 // 6️⃣ START SERVER
 // ======================================================================
 
-app.listen(3000, () => {
+const server = app.listen(3000, () => {
   console.log("🚀 Chat AI server chạy tại http://localhost:3000");
+});
+
+const realtimeWss = new WebSocketServer({ noServer: true });
+
+realtimeWss.on("connection", (socket, request, claims) => {
+  const userId = Number(claims.uid);
+  addRealtimeClient(userId, socket);
+
+  socket.on("close", () => {
+    removeRealtimeClient(userId, socket);
+  });
+
+  socket.on("error", () => {
+    removeRealtimeClient(userId, socket);
+  });
+
+  socket.send(
+    JSON.stringify({
+      event: "realtime.ready",
+      payload: {
+        uid: userId,
+        role: claims.role,
+      },
+      sentAt: new Date().toISOString(),
+    })
+  );
+});
+
+server.on("upgrade", (request, socket, head) => {
+  const requestUrl = new URL(request.url || "/", "http://localhost");
+  if (requestUrl.pathname !== "/ws") {
+    socket.destroy();
+    return;
+  }
+
+  if (!REALTIME_SHARED_SECRET) {
+    socket.write("HTTP/1.1 503 Service Unavailable\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  const token = requestUrl.searchParams.get("token") || "";
+  const claims = verifyRealtimeToken(token, REALTIME_SHARED_SECRET);
+  if (!claims) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  realtimeWss.handleUpgrade(request, socket, head, (ws) => {
+    realtimeWss.emit("connection", ws, request, claims);
+  });
 });

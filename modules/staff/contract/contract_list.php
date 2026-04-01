@@ -3,12 +3,10 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../db_connect.php';
 require_once '../../../includes/auth_check.php';
 requireRole(['Admin', 'Manager']);
-
 require_once '../../../includes/admin_header.php';
 
 $conn->set_charset('utf8mb4');
 
-/* CSRF cho JS */
 if (empty($_SESSION['_csrf'])) {
     $_SESSION['_csrf'] = bin2hex(random_bytes(32));
 }
@@ -17,63 +15,34 @@ $csrf = $_SESSION['_csrf'];
 /* ==================== 1) TỰ ĐỘNG CẬP NHẬT HỢP ĐỒNG & PHÒNG ==================== */
 $conn->begin_transaction();
 try {
-    // 1) Cập nhật HĐ quá hạn -> Hết hạn
-    $conn->query("
-        UPDATE Contracts
-        SET Status = 'Hết hạn'
-        WHERE EndDate < CURDATE()
-          AND Status = 'Hiệu lực'
-    ");
-
-    // 2) Đồng bộ Rooms theo số HĐ 'Hiệu lực'
-    // Reset
+    $conn->query("UPDATE Contracts SET Status = 'Hết hạn' WHERE EndDate < CURDATE() AND Status = 'Hiệu lực'");
     $conn->query("UPDATE Rooms SET CurrentOccupants = 0, Status = 'Trống'");
-
-    // Cập nhật lại
     $conn->query("
         UPDATE Rooms r
         LEFT JOIN (
-            SELECT RoomID, COUNT(*) AS cnt
-            FROM Contracts
-            WHERE Status = 'Hiệu lực'
-            GROUP BY RoomID
+            SELECT RoomID, COUNT(*) AS cnt FROM Contracts WHERE Status = 'Hiệu lực' GROUP BY RoomID
         ) c ON r.RoomID = c.RoomID
-        SET
-            r.CurrentOccupants = COALESCE(c.cnt, 0),
+        SET r.CurrentOccupants = COALESCE(c.cnt, 0),
             r.Status = CASE
                 WHEN COALESCE(c.cnt, 0) = 0 THEN 'Trống'
                 WHEN COALESCE(c.cnt, 0) >= r.Capacity THEN 'Đầy'
                 ELSE 'Đang ở'
             END
     ");
-
     $conn->commit();
 } catch (Throwable $e) {
     $conn->rollback();
-    // error_log($e->getMessage());
 }
 
-/* ==================== 2) THỐNG KÊ (KÈM CẢ CẢNH BÁO) ==================== */
-$stats = [
-    'active'    => 0,
-    'expired'   => 0,
-    'cancelled' => 0,
-    'expiring'  => 0,
-    'overdue'   => 0,
-    'total'     => 0,
-];
-
+/* ==================== 2) THỐNG KÊ ==================== */
+$stats = ['active' => 0, 'expired' => 0, 'cancelled' => 0, 'expiring' => 0, 'total' => 0];
 $resStats = $conn->query("
     SELECT
-        SUM(Status = 'Hiệu lực')                                           AS active,
-        SUM(Status = 'Hết hạn')                                            AS expired,
-        SUM(Status = 'Đã hủy')                                             AS cancelled,
-        SUM(Status = 'Hiệu lực'
-            AND EndDate >= CURDATE()
-            AND EndDate <= DATE_ADD(CURDATE(), INTERVAL 7 DAY))           AS expiring,
-        SUM(Status = 'Hiệu lực'
-            AND EndDate < CURDATE())                                      AS overdue,
-        COUNT(*)                                                           AS total
+        SUM(Status = 'Hiệu lực') AS active,
+        SUM(Status = 'Hết hạn') AS expired,
+        SUM(Status = 'Đã hủy') AS cancelled,
+        SUM(Status = 'Hiệu lực' AND EndDate >= CURDATE() AND EndDate <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)) AS expiring,
+        COUNT(*) AS total
     FROM Contracts
 ");
 if ($resStats) {
@@ -85,15 +54,13 @@ if ($resStats) {
 $status  = $_GET['status'] ?? 'all';
 $keyword = trim($_GET['search'] ?? '');
 
-/* ==================== 4) LẤY DANH SÁCH HỢP ĐỒNG ==================== */
 $sql = "
-    SELECT
-        c.ContractID, c.StartDate, c.EndDate, c.Deposit, c.Status, c.CreatedAt,
-        s.FullName, s.StudentCode, s.Phone, s.Email,
-        r.RoomNumber, b.BuildingName
+    SELECT c.ContractID, c.StartDate, c.EndDate, c.Deposit, c.Status, c.CreatedAt,
+           s.FullName, s.StudentCode, s.Phone, s.Email,
+           r.RoomNumber, b.BuildingName
     FROM Contracts c
-    JOIN Students  s ON c.StudentID = s.StudentID
-    JOIN Rooms     r ON c.RoomID    = r.RoomID
+    JOIN Students s ON c.StudentID = s.StudentID
+    JOIN Rooms r ON c.RoomID = r.RoomID
     JOIN Buildings b ON r.BuildingID = b.BuildingID
     WHERE 1=1
 ";
@@ -102,164 +69,119 @@ if ($status !== 'all') {
     $s = $conn->real_escape_string($status);
     $sql .= " AND c.Status = '$s'";
 }
-
 if ($keyword !== '') {
     $k = $conn->real_escape_string($keyword);
-    $sql .= " AND (
-        s.FullName     LIKE '%$k%' OR
-        s.StudentCode  LIKE '%$k%' OR
-        r.RoomNumber   LIKE '%$k%' OR
-        b.BuildingName LIKE '%$k%'
-    )";
+    $sql .= " AND (s.FullName LIKE '%$k%' OR s.StudentCode LIKE '%$k%' OR r.RoomNumber LIKE '%$k%' OR b.BuildingName LIKE '%$k%')";
 }
-
 $sql .= " ORDER BY c.CreatedAt DESC";
-
 $result = $conn->query($sql);
 
-/* ==================== 5) HÀM HỖ TRỢ ==================== */
+function e2($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function fmtMoney($amount) { return number_format((float)$amount, 0, ',', '.') . ' ₫'; }
 
-function e($s)
-{
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-}
-
-function formatMoney($amount)
-{
-    return number_format((float)$amount, 0, ',', '.') . ' ₫';
-}
-
-function getStatusClass($status)
-{
-    return strtolower(str_replace(' ', '-', $status));
-}
-
-/**
- * Trả về số ngày còn lại (ÂM nếu đã quá hạn)
- */
-function getDaysRemaining(string $endDate): int
-{
+function getDaysRemaining(string $endDate): int {
     try {
         $end = new DateTime($endDate);
         $now = new DateTime();
-        // %r%a: có dấu
         return (int)$now->diff($end)->format('%r%a');
-    } catch (Exception $e) {
-        return 0;
-    }
-}
-
-/**
- * Class CSS cho badge thời hạn:
- * - expiring: còn <=7 ngày
- * - overdue: quá hạn nhưng vẫn đang hiệu lực (nợ quá hạn)
- */
-function getDurationClass(string $endDate, string $status): string
-{
-    if ($status !== 'Hiệu lực') return '';
-    $d = getDaysRemaining($endDate);
-    if ($d < 0)  return 'overdue';
-    if ($d <= 7) return 'expiring';
-    return '';
+    } catch (Exception $e) { return 0; }
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quản lý Hợp đồng | Hệ thống Ký túc xá</title>
-
-    <link rel="stylesheet" href="../../../assets/css/admin/admin_header.css">
-    <link rel="stylesheet" href="../../../assets/css/staff/contract/staff_contract.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= e2($csrf) ?>">
+    <title>Quản lý Hợp đồng | Ký túc xá</title>
+    <link rel="stylesheet" href="<?= $base ?>assets/css/global.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/modules_shared.css">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/admin/admin_header.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <div class="contract-container">
-
-        <!-- HEADER -->
-        <div class="page-header">
-            <h2><i class="fas fa-file-contract"></i> Quản lý Hợp đồng</h2>
+    <div class="mod-container">
+        <!-- Header -->
+        <div class="mod-header">
+            <div class="mod-header-left">
+                <h2><i class="fas fa-file-contract"></i> Quản lý Hợp đồng</h2>
+            </div>
+            <div class="mod-header-right">
+                <?php if (($_SESSION['Role'] ?? '') === 'Admin'): ?>
+                <a href="contract_create.php" class="mod-btn mod-btn-primary">
+                    <i class="fas fa-plus-circle"></i> Tạo HĐ mới
+                </a>
+                <?php endif; ?>
+                <a href="contract_export.php" class="mod-btn mod-btn-outline">
+                    <i class="fas fa-file-export"></i> Xuất báo cáo
+                </a>
+            </div>
         </div>
 
-        <!-- Thông báo hệ thống -->
-        <div class="auto-update-alert">
+        <!-- Auto-sync alert -->
+        <div class="mod-alert mod-alert-info" style="margin-bottom:20px;">
             <i class="fas fa-sync-alt"></i>
-            <div class="content">
-                <h4>Tự động đồng bộ</h4>
-                <p>
-                    Hợp đồng quá ngày kết thúc sẽ tự chuyển sang <b>Hết hạn</b>.
-                    Số người trong phòng và trạng thái phòng được tự động cập nhật theo hợp đồng <b>Hiệu lực</b>.
-                </p>
+            <span>HĐ quá ngày kết thúc tự chuyển <b>Hết hạn</b>. Phòng được đồng bộ theo HĐ <b>Hiệu lực</b>.</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="mod-stats mod-stagger">
+            <div class="mod-stat accent-green">
+                <div class="mod-stat-icon" style="background:var(--gradient-success);"><i class="fas fa-check-circle"></i></div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= (int)$stats['active'] ?></span>
+                    <span class="mod-stat-label">Đang hiệu lực</span>
+                </div>
+            </div>
+            <div class="mod-stat accent-purple">
+                <div class="mod-stat-icon" style="background:var(--gradient-info);"><i class="fas fa-history"></i></div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= (int)$stats['expired'] ?></span>
+                    <span class="mod-stat-label">Đã hết hạn</span>
+                </div>
+            </div>
+            <div class="mod-stat accent-pink">
+                <div class="mod-stat-icon" style="background:var(--gradient-warning);"><i class="fas fa-ban"></i></div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= (int)$stats['cancelled'] ?></span>
+                    <span class="mod-stat-label">Đã hủy</span>
+                </div>
+            </div>
+            <div class="mod-stat accent-blue">
+                <div class="mod-stat-icon" style="background:var(--gradient-primary);"><i class="fas fa-file-alt"></i></div>
+                <div class="mod-stat-info">
+                    <span class="mod-stat-number"><?= (int)$stats['total'] ?></span>
+                    <span class="mod-stat-label">Tổng hợp đồng</span>
+                </div>
             </div>
         </div>
 
-        <!-- STATS -->
-        <div class="stats-container">
-            <div class="stat-card active">
-                <div class="stat-number"><?= (int)$stats['active'] ?></div>
-                <div class="stat-label">Đang hiệu lực</div>
-            </div>
-            <div class="stat-card expired">
-                <div class="stat-number"><?= (int)$stats['expired'] ?></div>
-                <div class="stat-label">Đã hết hạn</div>
-            </div>
-            <div class="stat-card cancelled">
-                <div class="stat-number"><?= (int)$stats['cancelled'] ?></div>
-                <div class="stat-label">Đã hủy</div>
-            </div>
-            <div class="stat-card total">
-                <div class="stat-number"><?= (int)$stats['total'] ?></div>
-                <div class="stat-label">Tổng hợp đồng</div>
-            </div>
-        </div>
-
-        <!-- QUICK ACTIONS -->
-        <div class="quick-actions">
-            <?php if (($_SESSION['Role'] ?? '') === 'Admin'): ?>
-            <a href="contract_create.php" class="quick-action-btn primary">
-                <i class="fas fa-plus-circle"></i> Tạo hợp đồng mới
-            </a>
-            <?php endif; ?>
-            <a href="contract_export.php" class="quick-action-btn">
-                <i class="fas fa-file-export"></i> Xuất báo cáo
-            </a>
-        </div>
-
-        <!-- FILTERS -->
-        <form method="get" class="filters">
-            <div class="filter-group">
-                <label><i class="fas fa-filter"></i> Trạng thái:</label>
-                <select name="status" onchange="this.form.submit()">
-                    <option value="all" <?= $status === 'all'       ? 'selected' : '' ?>>Tất cả</option>
-                    <option value="Hiệu lực" <?= $status === 'Hiệu lực' ? 'selected' : '' ?>>🟢 Hiệu lực</option>
-                    <option value="Hết hạn" <?= $status === 'Hết hạn'  ? 'selected' : '' ?>>⚫ Hết hạn</option>
-                    <option value="Đã hủy" <?= $status === 'Đã hủy'   ? 'selected' : '' ?>>🔴 Đã hủy</option>
+        <!-- Filters -->
+        <form method="get" class="mod-filters">
+            <div class="mod-filter-group">
+                <label><i class="fas fa-filter"></i> Trạng thái</label>
+                <select name="status" class="mod-select" onchange="this.form.submit()">
+                    <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Tất cả</option>
+                    <option value="Hiệu lực" <?= $status === 'Hiệu lực' ? 'selected' : '' ?>>Hiệu lực</option>
+                    <option value="Hết hạn" <?= $status === 'Hết hạn' ? 'selected' : '' ?>>Hết hạn</option>
+                    <option value="Đã hủy" <?= $status === 'Đã hủy' ? 'selected' : '' ?>>Đã hủy</option>
                 </select>
             </div>
-
-            <div class="filter-group search-box">
-                <input type="text"
-                    name="search"
-                    placeholder="Tìm theo tên, MSSV, phòng, tòa..."
-                    value="<?= e($keyword) ?>">
-                <button type="submit">
-                    <i class="fas fa-search"></i> <span>Tìm kiếm</span>
-                </button>
+            <div class="mod-filter-group" style="flex:2;">
+                <label><i class="fas fa-search"></i> Tìm kiếm</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" name="search" class="mod-input" placeholder="Tên, MSSV, phòng, tòa..." value="<?= e2($keyword) ?>">
+                    <button type="submit" class="mod-btn mod-btn-primary mod-btn-sm">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
             </div>
         </form>
 
-        <!-- TABLE -->
-        <div class="contract-table">
-            <?php if ($result && $result->num_rows > 0): ?>
-                <table>
+        <!-- Table -->
+        <div class="mod-table-wrap">
+            <div class="mod-table-scroll">
+                <table class="mod-table">
                     <thead>
                         <tr>
                             <th>Mã HĐ</th>
@@ -273,122 +195,124 @@ function getDurationClass(string $endDate, string $status): string
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = $result->fetch_assoc()):
-                            $statusClass   = getStatusClass($row['Status']);
-                            $daysRemaining = getDaysRemaining($row['EndDate']);
-                            $durationClass = getDurationClass($row['EndDate'], $row['Status']);
-                        ?>
-                            <tr class="<?= $durationClass === 'overdue' ? 'row-overdue' : '' ?>">
-                                <td data-label="Mã HĐ">
-                                    <strong>#<?= (int)$row['ContractID'] ?></strong>
-                                </td>
-                                <td data-label="Sinh viên">
-                                    <strong><?= e($row['FullName']) ?></strong><br>
-                                    <small class="text-muted"><?= e($row['StudentCode']) ?></small><br>
-                                    <?php if ($row['Phone']): ?>
-                                        <small class="text-muted"><?= e($row['Phone']) ?></small>
-                                    <?php endif; ?>
-                                </td>
-                                <td data-label="Phòng">
-                                    <strong><?= e($row['RoomNumber']) ?></strong><br>
-                                    <small class="text-muted"><?= e($row['BuildingName']) ?></small>
-                                </td>
-                                <td data-label="Thời hạn">
-                                    <div>
-                                        <strong><?= date('d/m/Y', strtotime($row['StartDate'])) ?></strong>
-                                        <span class="text-muted">→</span>
-                                        <strong><?= date('d/m/Y', strtotime($row['EndDate'])) ?></strong>
-                                        <?php if ($row['Status'] === 'Hiệu lực'): ?>
-                                            <br>
-                                            <small class="contract-duration <?= $durationClass ?>">
-                                                <?php if ($daysRemaining < 0): ?>
-                                                    ⚠️ Nợ quá hạn <?= abs($daysRemaining) ?> ngày
-                                                <?php elseif ($daysRemaining <= 7): ?>
-                                                    ⏳ Còn <?= (int)$daysRemaining ?> ngày (sắp hết hạn)
-                                                <?php else: ?>
-                                                    ✅ Còn <?= (int)$daysRemaining ?> ngày
-                                                <?php endif; ?>
-                                            </small>
-                                        <?php elseif ($row['Status'] === 'Hết hạn'): ?>
-                                            <br>
-                                            <small class="contract-duration expired-label">
-                                                ⚫ Đã hết hạn
-                                            </small>
+                        <?php if ($result && $result->num_rows > 0): ?>
+                            <?php while ($row = $result->fetch_assoc()):
+                                $daysRemaining = getDaysRemaining($row['EndDate']);
+                                $sBadge = match($row['Status']) {
+                                    'Hiệu lực' => 'mod-badge-emerald',
+                                    'Hết hạn'  => 'mod-badge-gray',
+                                    'Đã hủy'   => 'mod-badge-red',
+                                    default     => 'mod-badge-blue',
+                                };
+                                $sIcon = match($row['Status']) {
+                                    'Hiệu lực' => 'fa-check-circle',
+                                    'Hết hạn'  => 'fa-clock',
+                                    'Đã hủy'   => 'fa-ban',
+                                    default     => 'fa-file',
+                                };
+                                $isOverdue = $row['Status'] === 'Hiệu lực' && $daysRemaining < 0;
+                                $isExpiring = $row['Status'] === 'Hiệu lực' && $daysRemaining >= 0 && $daysRemaining <= 7;
+                            ?>
+                                <tr <?= $isOverdue ? 'style="background:rgba(239,68,68,0.05);"' : '' ?>>
+                                    <td><span class="mod-fw-700">#<?= (int)$row['ContractID'] ?></span></td>
+                                    <td>
+                                        <div class="mod-cell-name"><?= e2($row['FullName']) ?></div>
+                                        <div class="mod-cell-sub"><?= e2($row['StudentCode']) ?></div>
+                                        <?php if ($row['Phone']): ?>
+                                            <div class="mod-cell-sub"><i class="fas fa-phone"></i> <?= e2($row['Phone']) ?></div>
                                         <?php endif; ?>
-                                    </div>
-                                </td>
-                                <td data-label="Tiền cọc">
-                                    <strong><?= formatMoney($row['Deposit']) ?></strong>
-                                </td>
-                                <td data-label="Trạng thái">
-                                    <span class="status-badge <?= $statusClass ?>">
-                                        <?= e($row['Status']) ?>
-                                    </span>
-                                </td>
-                                <td data-label="Ngày tạo">
-                                    <?= date('d/m/Y', strtotime($row['CreatedAt'])) ?>
-                                </td>
-                                <td data-label="Thao tác">
-                                    <div class="action-buttons">
-                                        <a href="contract_detail.php?id=<?= (int)$row['ContractID'] ?>"
-                                            class="btn btn-view" title="Xem chi tiết">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <?php if (($_SESSION['Role'] ?? '') === 'Admin'): ?>
-                                        <a href="contract_edit.php?id=<?= (int)$row['ContractID'] ?>"
-                                            class="btn btn-view" title="Sửa">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                            <button class="btn btn-cancel"
-                                                title="Hủy hợp đồng"
-                                                onclick="deleteContract(<?= (int)$row['ContractID'] ?>,'<?= e($row['FullName']) ?>', false, this)">
+                                    </td>
+                                    <td>
+                                        <div class="mod-cell-name"><?= e2($row['RoomNumber']) ?></div>
+                                        <div class="mod-cell-sub"><?= e2($row['BuildingName']) ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="mod-cell-name">
+                                            <?= date('d/m/Y', strtotime($row['StartDate'])) ?>
+                                            <span class="mod-cell-muted">→</span>
+                                            <?= date('d/m/Y', strtotime($row['EndDate'])) ?>
+                                        </div>
+                                        <?php if ($row['Status'] === 'Hiệu lực'): ?>
+                                            <?php if ($isOverdue): ?>
+                                                <span class="mod-badge mod-badge-red" style="font-size:0.7rem;">
+                                                    <i class="fas fa-exclamation-triangle"></i> Quá hạn <?= abs($daysRemaining) ?> ngày
+                                                </span>
+                                            <?php elseif ($isExpiring): ?>
+                                                <span class="mod-badge mod-badge-amber" style="font-size:0.7rem;">
+                                                    <i class="fas fa-clock"></i> Còn <?= $daysRemaining ?> ngày
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="mod-badge mod-badge-emerald" style="font-size:0.7rem;">
+                                                    <i class="fas fa-check"></i> Còn <?= $daysRemaining ?> ngày
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><span class="mod-fw-700"><?= fmtMoney($row['Deposit']) ?></span></td>
+                                    <td>
+                                        <span class="mod-badge <?= $sBadge ?>">
+                                            <i class="fas <?= $sIcon ?>"></i> <?= e2($row['Status']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="mod-cell-muted"><?= date('d/m/Y', strtotime($row['CreatedAt'])) ?></td>
+                                    <td>
+                                        <div class="mod-row-actions">
+                                            <a href="contract_detail.php?id=<?= (int)$row['ContractID'] ?>" class="mod-btn-icon view" title="Xem">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <?php if (($_SESSION['Role'] ?? '') === 'Admin'): ?>
+                                            <a href="contract_edit.php?id=<?= (int)$row['ContractID'] ?>" class="mod-btn-icon edit" title="Sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="mod-btn-icon delete" style="color:var(--amber);" title="Hủy HĐ"
+                                                onclick="deleteContract(<?= (int)$row['ContractID'] ?>,'<?= e2($row['FullName']) ?>', false, this)">
                                                 <i class="fas fa-ban"></i>
                                             </button>
-                                            <button class="btn btn-delete"
-                                                title="Xóa hẳn hợp đồng"
-                                                onclick="deleteContract(<?= (int)$row['ContractID'] ?>,'<?= e($row['FullName']) ?>', true, this)">
+                                            <button class="mod-btn-icon delete" title="Xóa hẳn"
+                                                onclick="deleteContract(<?= (int)$row['ContractID'] ?>,'<?= e2($row['FullName']) ?>', true, this)">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="8">
+                                    <div class="mod-empty">
+                                        <i class="fas fa-inbox"></i>
+                                        <p>Không có hợp đồng nào phù hợp.</p>
+                                        <a class="mod-btn mod-btn-outline mod-btn-sm" href="?status=all&search=">
+                                            <i class="fas fa-redo"></i> Xem tất cả
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
-            <?php else: ?>
-                <div class="no-data">
-                    <i class="fas fa-inbox"></i>
-                    <p>Không có hợp đồng nào phù hợp với tiêu chí.</p>
-                    <a href="?status=all&search=" class="btn btn-view mt-md">
-                        <i class="fas fa-rotate-right"></i> Xem tất cả hợp đồng
-                    </a>
-                </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
 
     <script>
-        const CONTRACT_DELETE_URL = '/modules/staff/contract/contract_delete_api.php';
-        const CSRF_TOKEN = '<?= e($csrf) ?>';
+        const CONTRACT_DELETE_URL = '<?= $base ?>modules/staff/contract/contract_delete_api.php';
+        const CSRF_TOKEN = '<?= e2($csrf) ?>';
 
         async function deleteContract(id, name, hard = false, btnEl = null) {
             const res = await Swal.fire({
                 title: hard ? 'Xóa HẲN hợp đồng?' : 'Hủy hợp đồng?',
-                html: `
-            <p>Bạn có chắc muốn ${hard ? '<b>xóa hẳn</b>' : '<b>hủy</b>'} hợp đồng của
-            <strong>${name}</strong>?</p>
-            <p class="text-muted">
-                ${hard
+                html: `<p>Bạn có chắc muốn ${hard ? '<b>xóa hẳn</b>' : '<b>hủy</b>'} hợp đồng của <strong>${name}</strong>?</p>
+                <p style="color:var(--text-secondary);font-size:0.85rem;">${hard
                     ? 'Dữ liệu hợp đồng sẽ bị xóa khỏi hệ thống, không thể hoàn tác.'
-                    : 'Hợp đồng sẽ ngừng hiệu lực, phòng được giải phóng.'}
-            </p>`,
+                    : 'Hợp đồng sẽ ngừng hiệu lực, phòng được giải phóng.'}</p>`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: hard ? '#e63946' : '#d33',
+                confirmButtonColor: hard ? '#e63946' : '#f72585',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: hard ? '<i class="fas fa-trash"></i> Xóa hẳn' : '<i class="fas fa-ban"></i> Hủy',
-                cancelButtonText: '<i class="fas fa-times"></i> Thoát',
+                confirmButtonText: hard ? '<i class="fas fa-trash"></i> Xóa hẳn' : '<i class="fas fa-ban"></i> Hủy HĐ',
+                cancelButtonText: 'Thoát',
                 reverseButtons: true
             });
 
@@ -397,7 +321,6 @@ function getDurationClass(string $endDate, string $status): string
             const originalHTML = btnEl ? btnEl.innerHTML : '';
             if (btnEl) {
                 btnEl.disabled = true;
-                btnEl.classList.add('loading');
                 btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             }
 
@@ -407,20 +330,11 @@ function getDurationClass(string $endDate, string $status): string
                 form.append('hard', hard ? '1' : '0');
                 form.append('_csrf', CSRF_TOKEN);
 
-                const r = await fetch(CONTRACT_DELETE_URL, {
-                    method: 'POST',
-                    body: form
-                });
+                const r = await fetch(CONTRACT_DELETE_URL, { method: 'POST', body: form });
                 const data = await r.json().catch(() => null);
 
                 if (r.ok && data && data.ok) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: hard ? 'Đã xóa hợp đồng!' : 'Đã hủy hợp đồng!',
-                        text: data.message || 'Thao tác thành công.',
-                        timer: 1600,
-                        showConfirmButton: false
-                    });
+                    await Swal.fire({ icon: 'success', title: hard ? 'Đã xóa!' : 'Đã hủy!', text: data.message || 'Thành công.', timer: 1600, showConfirmButton: false });
                     location.reload();
                 } else {
                     const msg = (data && (data.error || data.message)) || `HTTP ${r.status}`;
@@ -431,18 +345,16 @@ function getDurationClass(string $endDate, string $status): string
             } finally {
                 if (btnEl) {
                     btnEl.disabled = false;
-                    btnEl.classList.remove('loading');
                     btnEl.innerHTML = originalHTML;
                 }
             }
         }
 
-        // Thông báo session (nếu có)
         <?php if (isset($_SESSION['message'])): ?>
             Swal.fire({
                 icon: '<?= $_SESSION['message_type'] ?? 'success' ?>',
                 title: 'Thông báo',
-                html: '<?= e($_SESSION['message']) ?>',
+                html: '<?= e2($_SESSION['message']) ?>',
                 confirmButtonColor: '#4361ee',
                 timer: 2800
             });
@@ -450,5 +362,4 @@ function getDurationClass(string $endDate, string $status): string
         <?php endif; ?>
     </script>
 </body>
-
 </html>
